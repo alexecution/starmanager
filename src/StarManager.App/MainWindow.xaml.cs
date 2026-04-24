@@ -1,8 +1,10 @@
 ﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using StarManager.App.Models;
 using StarManager.App.Services;
@@ -22,6 +24,7 @@ public partial class MainWindow : Window
     private string? _selectedStarRoot;
     private StarScanResult? _scanResult;
     private AppSettings _settings = new();
+    private bool _isDarkThemeActive;
 
     public ObservableCollection<ProviderItem> Providers { get; } = [];
 
@@ -29,7 +32,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = this;
+        SourceInitialized += OnSourceInitialized;
         LoadSettings();
+    }
+
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        ApplyWindowChromeTheme(_isDarkThemeActive);
     }
 
     private void BrowseButton_OnClick(object sender, RoutedEventArgs e)
@@ -274,11 +283,98 @@ public partial class MainWindow : Window
             || (themeName.Equals("System", StringComparison.OrdinalIgnoreCase)
                 && IsSystemInDarkMode());
 
-        var windowBackground = useDarkTheme ? Color.FromRgb(26, 28, 32) : Color.FromRgb(248, 249, 251);
-        var textForeground = useDarkTheme ? Color.FromRgb(230, 233, 238) : Color.FromRgb(23, 28, 34);
+        _isDarkThemeActive = useDarkTheme;
+        ApplyThemeResources(useDarkTheme);
+        ApplyWindowChromeTheme(useDarkTheme);
+    }
 
-        Background = new SolidColorBrush(windowBackground);
-        Foreground = new SolidColorBrush(textForeground);
+    private static void ApplyThemeResources(bool useDarkTheme)
+    {
+        if (useDarkTheme)
+        {
+            SetThemeBrush("AppWindowBackgroundBrush", Color.FromRgb(26, 28, 32));
+            SetThemeBrush("AppSurfaceBrush", Color.FromRgb(34, 38, 44));
+            SetThemeBrush("AppControlBackgroundBrush", Color.FromRgb(42, 46, 54));
+            SetThemeBrush("AppControlForegroundBrush", Color.FromRgb(230, 233, 238));
+            SetThemeBrush("AppSecondaryForegroundBrush", Color.FromRgb(185, 192, 203));
+            SetThemeBrush("AppBorderBrush", Color.FromRgb(78, 88, 102));
+            SetThemeBrush("AppAccentBrush", Color.FromRgb(123, 171, 255));
+            SetThemeBrush("AppDataGridAltRowBrush", Color.FromRgb(38, 43, 50));
+            SetThemeBrush("AppSelectionBrush", Color.FromRgb(64, 88, 130));
+            return;
+        }
+
+        SetThemeBrush("AppWindowBackgroundBrush", Color.FromRgb(248, 249, 251));
+        SetThemeBrush("AppSurfaceBrush", Color.FromRgb(255, 255, 255));
+        SetThemeBrush("AppControlBackgroundBrush", Color.FromRgb(255, 255, 255));
+        SetThemeBrush("AppControlForegroundBrush", Color.FromRgb(23, 28, 34));
+        SetThemeBrush("AppSecondaryForegroundBrush", Color.FromRgb(54, 66, 79));
+        SetThemeBrush("AppBorderBrush", Color.FromRgb(216, 221, 229));
+        SetThemeBrush("AppAccentBrush", Color.FromRgb(46, 95, 181));
+        SetThemeBrush("AppDataGridAltRowBrush", Color.FromRgb(243, 246, 250));
+        SetThemeBrush("AppSelectionBrush", Color.FromRgb(204, 224, 255));
+    }
+
+    private static void SetThemeBrush(string key, Color color)
+    {
+        Application.Current.Resources[key] = new SolidColorBrush(color);
+    }
+
+    private void ApplyWindowChromeTheme(bool useDarkTheme)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var windowHandle = new WindowInteropHelper(this).Handle;
+        if (windowHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var darkModeFlag = useDarkTheme ? 1 : 0;
+
+        var result = DwmSetWindowAttribute(windowHandle, DwmUseImmersiveDarkMode, ref darkModeFlag, sizeof(int));
+        if (result != 0)
+        {
+            _ = DwmSetWindowAttribute(windowHandle, DwmUseImmersiveDarkModeBefore20H1, ref darkModeFlag, sizeof(int));
+        }
+
+        if (useDarkTheme)
+        {
+            var darkCaptionColor = ToColorRef(Color.FromRgb(26, 28, 32));
+            var darkBorderColor = ToColorRef(Color.FromRgb(26, 28, 32));
+            var lightTextColor = ToColorRef(Color.FromRgb(230, 233, 238));
+
+            _ = DwmSetWindowAttribute(windowHandle, DwmCaptionColor, ref darkCaptionColor, sizeof(uint));
+            _ = DwmSetWindowAttribute(windowHandle, DwmBorderColor, ref darkBorderColor, sizeof(uint));
+            _ = DwmSetWindowAttribute(windowHandle, DwmTextColor, ref lightTextColor, sizeof(uint));
+            return;
+        }
+
+        var defaultColor = DwmColorDefault;
+        _ = DwmSetWindowAttribute(windowHandle, DwmCaptionColor, ref defaultColor, sizeof(uint));
+        _ = DwmSetWindowAttribute(windowHandle, DwmBorderColor, ref defaultColor, sizeof(uint));
+        _ = DwmSetWindowAttribute(windowHandle, DwmTextColor, ref defaultColor, sizeof(uint));
+    }
+
+    private const int DwmUseImmersiveDarkModeBefore20H1 = 19;
+    private const int DwmUseImmersiveDarkMode = 20;
+    private const int DwmBorderColor = 34;
+    private const int DwmCaptionColor = 35;
+    private const int DwmTextColor = 36;
+    private const uint DwmColorDefault = 0xFFFFFFFF;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref uint pvAttribute, int cbAttribute);
+
+    private static uint ToColorRef(Color color)
+    {
+        return (uint)(color.R | (color.G << 8) | (color.B << 16));
     }
 
     private void LoadSettings()

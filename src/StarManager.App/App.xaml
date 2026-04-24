@@ -4,6 +4,97 @@
              xmlns:local="clr-namespace:StarManager.App"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#F8F9FB" />
+        <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="AppControlBackgroundBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="AppControlForegroundBrush" Color="#171C22" />
+        <SolidColorBrush x:Key="AppSecondaryForegroundBrush" Color="#36424F" />
+        <SolidColorBrush x:Key="AppBorderBrush" Color="#D8DDE5" />
+        <SolidColorBrush x:Key="AppAccentBrush" Color="#2E5FB5" />
+        <SolidColorBrush x:Key="AppDataGridAltRowBrush" Color="#F3F6FA" />
+        <SolidColorBrush x:Key="AppSelectionBrush" Color="#CCE0FF" />
+
+        <Style TargetType="Window">
+            <Setter Property="Background" Value="{DynamicResource AppWindowBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="RowBackground" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AppDataGridAltRowBrush}" />
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppSelectionBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppSelectionBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,1,1" />
+        </Style>
     </Application.Resources>
 </Application>
