@@ -4,17 +4,26 @@ STAR Manager is a Windows desktop manager for Speech To Audio Relay (STAR) which
 
 ## Current status
 
-Early implementation is in progress.
+Active implementation.
 
 Implemented so far:
 - Browse to a STAR root folder
 - Scan and detect STAR components (user app, coagulator, providers)
 - List discovered providers in the UI
+- Filter providers by name and setup state
 - Launch provider configuration using the existing provider configure flow
 - Start and stop providers from the UI
 - Launch STAR user app from the detected entrypoint
 - Open coagulator website URL when available in coagulator.ini
+- Start and stop local coagulator from a dedicated tab
 - Theme selection (System, Dark, Light)
+- Persist settings in AppData\Roaming (theme, last path, recent STAR paths)
+- Persist provider setup state (configured/initialized providers)
+- Show scan diagnostics and activity log in the UI
+- Keyboard navigation improvements for provider actions
+
+In progress:
+- Provider diagnostics depth (richer per-provider troubleshooting details)
 
 ## Target platform
 
@@ -51,11 +60,10 @@ From the repository root:
 
 ## Planned next steps
 
-- Add coagulator start and stop controls
-- Add persisted settings (recent STAR paths, theme preference)
 - Add fallback INI editor for common provider settings
-- Add provider diagnostics and logs in the UI
+- Expand provider diagnostics and log details (output/error context)
 - Add installer packaging workflow for GitHub releases
+- Add release automation and distribution artifacts
 
 ## Relationship to STAR
 
@@ -74,4 +82,4 @@ Contributions are welcome. For now, open an issue with:
 
 ## License
 
-License will be added before first public release.
+This project is licensed under the terms in [LICENSE](LICENSE).
