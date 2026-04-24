@@ -16,9 +16,12 @@ public partial class MainWindow : Window
 {
     private readonly StarDiscoveryService _discoveryService = new();
     private readonly ProviderProcessService _providerProcessService = new();
+    private readonly CoagulatorProcessService _coagulatorProcessService = new();
+    private readonly SettingsService _settingsService = new();
 
     private string? _selectedStarRoot;
     private StarScanResult? _scanResult;
+    private AppSettings _settings = new();
 
     public ObservableCollection<ProviderItem> Providers { get; } = [];
 
@@ -26,7 +29,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = this;
-        ApplyTheme("System");
+        LoadSettings();
     }
 
     private void BrowseButton_OnClick(object sender, RoutedEventArgs e)
@@ -44,6 +47,8 @@ public partial class MainWindow : Window
 
         _selectedStarRoot = dialog.FolderName;
         StarPathTextBox.Text = _selectedStarRoot;
+        _settings.LastStarRootPath = _selectedStarRoot;
+        _settingsService.Save(_settings);
         StatusTextBlock.Text = "STAR folder selected. Click Scan to detect components.";
     }
 
@@ -188,6 +193,42 @@ public partial class MainWindow : Window
 
         var themeName = selected.Content?.ToString() ?? "System";
         ApplyTheme(themeName);
+        _settings.ThemeName = themeName;
+        _settingsService.Save(_settings);
+    }
+
+    private void StartCoagulatorButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_scanResult is null || string.IsNullOrWhiteSpace(_scanResult.CoagulatorEntryPath))
+        {
+            StatusTextBlock.Text = "Coagulator entrypoint was not detected in this setup.";
+            return;
+        }
+
+        try
+        {
+            _coagulatorProcessService.Start(_scanResult.CoagulatorEntryPath);
+            UpdateCoagulatorStatusText();
+            StatusTextBlock.Text = "Coagulator started.";
+        }
+        catch (Exception ex)
+        {
+            StatusTextBlock.Text = $"Could not start coagulator: {ex.Message}";
+        }
+    }
+
+    private async void StopCoagulatorButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await _coagulatorProcessService.StopAsync();
+            UpdateCoagulatorStatusText();
+            StatusTextBlock.Text = "Coagulator stopped.";
+        }
+        catch (Exception ex)
+        {
+            StatusTextBlock.Text = $"Could not stop coagulator: {ex.Message}";
+        }
     }
 
     private bool TryGetProviderFromButton(object sender, out ProviderItem provider)
@@ -239,6 +280,52 @@ public partial class MainWindow : Window
         Background = new SolidColorBrush(windowBackground);
         Foreground = new SolidColorBrush(textForeground);
     }
+
+    private void LoadSettings()
+    {
+        _settings = _settingsService.Load();
+
+        if (!string.IsNullOrWhiteSpace(_settings.LastStarRootPath) && Directory.Exists(_settings.LastStarRootPath))
+        {
+            _selectedStarRoot = _settings.LastStarRootPath;
+            StarPathTextBox.Text = _selectedStarRoot;
+            StatusTextBlock.Text = "Loaded last STAR folder from settings. Click Scan to refresh components.";
+        }
+
+        var themeName = string.IsNullOrWhiteSpace(_settings.ThemeName) ? "System" : _settings.ThemeName;
+        SetThemeSelection(themeName);
+        ApplyTheme(themeName);
+        UpdateCoagulatorStatusText();
+    }
+
+    private void SetThemeSelection(string themeName)
+    {
+        foreach (var item in ThemeComboBox.Items)
+        {
+            if (item is not ComboBoxItem comboBoxItem)
+            {
+                continue;
+            }
+
+            if (!string.Equals(comboBoxItem.Content?.ToString(), themeName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            ThemeComboBox.SelectedItem = comboBoxItem;
+            return;
+        }
+
+        ThemeComboBox.SelectedIndex = 0;
+    }
+
+    private void UpdateCoagulatorStatusText()
+    {
+        CoagulatorStatusTextBlock.Text = _coagulatorProcessService.IsRunning
+            ? "Coagulator: Running"
+            : "Coagulator: Stopped";
+    }
+
 
     private static bool IsSystemInDarkMode()
     {

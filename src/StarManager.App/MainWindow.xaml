@@ -78,65 +78,104 @@
             </ComboBox>
         </StackPanel>
 
-        <Grid Grid.Row="2" Grid.ColumnSpan="2">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+        <TabControl Grid.Row="2" Grid.ColumnSpan="2">
+            <TabItem Header="Providers">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
 
-            <WrapPanel Grid.Row="0" Margin="0,0,0,10">
-                <Button Content="Launch STAR App"
-                        Height="34"
-                        Padding="14,0"
-                        Margin="0,0,10,0"
-                        Click="LaunchStarAppButton_OnClick" />
-                <Button Content="Open Coagulator Website"
-                        Height="34"
-                        Padding="14,0"
-                        Click="OpenCoagulatorWebsiteButton_OnClick" />
-            </WrapPanel>
+                    <WrapPanel Grid.Row="0" Margin="0,0,0,10">
+                        <Button Content="Launch STAR App"
+                                Height="34"
+                                Padding="14,0"
+                                Margin="0,0,10,0"
+                                Click="LaunchStarAppButton_OnClick" />
+                        <Button Content="Open Coagulator Website"
+                                Height="34"
+                                Padding="14,0"
+                                Click="OpenCoagulatorWebsiteButton_OnClick" />
+                    </WrapPanel>
 
-            <DataGrid x:Name="ProvidersDataGrid"
-                      Grid.Row="1"
-                      ItemsSource="{Binding Providers}"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False"
-                      IsReadOnly="True"
-                      HeadersVisibility="Column"
-                      RowHeaderWidth="0"
-                      GridLinesVisibility="Horizontal"
-                      SelectionMode="Single">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Provider" Binding="{Binding Name}" Width="2*" />
-                    <DataGridTextColumn Header="Folder" Binding="{Binding FolderPath}" Width="3*" />
-                    <DataGridTextColumn Header="Entry" Binding="{Binding EntryPath}" Width="3*" />
-                    <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="*" />
+                    <DataGrid x:Name="ProvidersDataGrid"
+                              Grid.Row="1"
+                              ItemsSource="{Binding Providers}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              RowHeaderWidth="0"
+                              GridLinesVisibility="Horizontal"
+                              SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Provider" Binding="{Binding Name}" Width="2*" />
+                            <DataGridTextColumn Header="Folder" Binding="{Binding FolderPath}" Width="3*" />
+                            <DataGridTextColumn Header="Entry" Binding="{Binding EntryPath}" Width="3*" />
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="*" />
 
-                    <DataGridTemplateColumn Header="Actions" Width="3*">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate DataType="{x:Type models:ProviderItem}">
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                    <Button Content="Configure"
-                                            Margin="0,0,6,0"
-                                            Padding="12,3"
-                                            Click="ConfigureProviderButton_OnClick"
-                                            Tag="{Binding}" />
-                                    <Button Content="Start"
-                                            Margin="0,0,6,0"
-                                            Padding="12,3"
-                                            Click="StartProviderButton_OnClick"
-                                            Tag="{Binding}" />
-                                    <Button Content="Stop"
-                                            Padding="12,3"
-                                            Click="StopProviderButton_OnClick"
-                                            Tag="{Binding}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
-        </Grid>
+                            <DataGridTemplateColumn Header="Actions" Width="3*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type models:ProviderItem}">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                            <Button Content="Configure"
+                                                    Margin="0,0,6,0"
+                                                    Padding="12,3"
+                                                    Click="ConfigureProviderButton_OnClick"
+                                                    Tag="{Binding}" />
+                                            <Button Content="Start"
+                                                    Margin="0,0,6,0"
+                                                    Padding="12,3"
+                                                    Click="StartProviderButton_OnClick"
+                                                    Tag="{Binding}" />
+                                            <Button Content="Stop"
+                                                    Padding="12,3"
+                                                    Click="StopProviderButton_OnClick"
+                                                    Tag="{Binding}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Coagulators">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="For advanced users hosting their own coagulator instance."
+                               Margin="0,0,0,10" />
+
+                    <WrapPanel Grid.Row="1" Margin="0,0,0,10">
+                        <Button Content="Start Local Coagulator"
+                                Height="34"
+                                Padding="14,0"
+                                Margin="0,0,10,0"
+                                Click="StartCoagulatorButton_OnClick" />
+                        <Button Content="Stop Local Coagulator"
+                                Height="34"
+                                Padding="14,0"
+                                Margin="0,0,10,0"
+                                Click="StopCoagulatorButton_OnClick" />
+                        <Button Content="Open Coagulator Website"
+                                Height="34"
+                                Padding="14,0"
+                                Click="OpenCoagulatorWebsiteButton_OnClick" />
+                        <TextBlock x:Name="CoagulatorStatusTextBlock"
+                                   Margin="16,7,0,0"
+                                   FontWeight="SemiBold"
+                                   Text="Coagulator: Stopped" />
+                    </WrapPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
 
         <TextBlock x:Name="StatusTextBlock"
                    Grid.Row="3"
