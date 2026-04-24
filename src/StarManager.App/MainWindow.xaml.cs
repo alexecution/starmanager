@@ -5,7 +5,9 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using StarManager.App.Models;
 using StarManager.App.Services;
 
@@ -39,6 +41,39 @@ public partial class MainWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         ApplyWindowChromeTheme(_isDarkThemeActive);
+    }
+
+    private void Window_OnLoaded(object sender, RoutedEventArgs e)
+    {
+        // Delay focus assignment until layout completes to avoid focus being stolen by template initialization.
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            if (BrowseButton.IsVisible && BrowseButton.IsEnabled)
+            {
+                _ = BrowseButton.Focus();
+            }
+        }, DispatcherPriority.Input);
+    }
+
+    private void Window_OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.Control)
+        {
+            return;
+        }
+
+        if (e.Key is Key.D1 or Key.NumPad1)
+        {
+            MainSectionsTabControl.SelectedItem = ProvidersTabItem;
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key is Key.D2 or Key.NumPad2)
+        {
+            MainSectionsTabControl.SelectedItem = CoagulatorsTabItem;
+            e.Handled = true;
+        }
     }
 
     private void BrowseButton_OnClick(object sender, RoutedEventArgs e)
@@ -292,27 +327,39 @@ public partial class MainWindow : Window
     {
         if (useDarkTheme)
         {
-            SetThemeBrush("AppWindowBackgroundBrush", Color.FromRgb(26, 28, 32));
-            SetThemeBrush("AppSurfaceBrush", Color.FromRgb(34, 38, 44));
-            SetThemeBrush("AppControlBackgroundBrush", Color.FromRgb(42, 46, 54));
-            SetThemeBrush("AppControlForegroundBrush", Color.FromRgb(230, 233, 238));
-            SetThemeBrush("AppSecondaryForegroundBrush", Color.FromRgb(185, 192, 203));
-            SetThemeBrush("AppBorderBrush", Color.FromRgb(78, 88, 102));
-            SetThemeBrush("AppAccentBrush", Color.FromRgb(123, 171, 255));
-            SetThemeBrush("AppDataGridAltRowBrush", Color.FromRgb(38, 43, 50));
-            SetThemeBrush("AppSelectionBrush", Color.FromRgb(64, 88, 130));
+            SetThemeBrush("AppWindowBackgroundBrush", Color.FromRgb(22, 25, 31));
+            SetThemeBrush("AppSurfaceBrush", Color.FromRgb(30, 35, 43));
+            SetThemeBrush("AppControlBackgroundBrush", Color.FromRgb(37, 43, 53));
+            SetThemeBrush("AppControlForegroundBrush", Color.FromRgb(243, 244, 246));
+            SetThemeBrush("AppSecondaryForegroundBrush", Color.FromRgb(199, 206, 217));
+            SetThemeBrush("AppBorderBrush", Color.FromRgb(150, 163, 184));
+            SetThemeBrush("AppAccentBrush", Color.FromRgb(139, 184, 255));
+            SetThemeBrush("AppDataGridAltRowBrush", Color.FromRgb(35, 42, 52));
+            SetThemeBrush("AppSelectionBrush", Color.FromRgb(51, 90, 148));
+            SetThemeBrush("AppControlHoverBrush", Color.FromRgb(45, 53, 66));
+            SetThemeBrush("AppControlPressedBrush", Color.FromRgb(58, 71, 90));
+            SetThemeBrush("AppDisabledBackgroundBrush", Color.FromRgb(47, 54, 66));
+            SetThemeBrush("AppDisabledForegroundBrush", Color.FromRgb(164, 176, 194));
+            SetThemeBrush("AppFocusBrush", Color.FromRgb(139, 184, 255));
+            SetThemeBrush("AppTabActiveBackgroundBrush", Color.FromRgb(44, 67, 103));
             return;
         }
 
-        SetThemeBrush("AppWindowBackgroundBrush", Color.FromRgb(248, 249, 251));
+        SetThemeBrush("AppWindowBackgroundBrush", Color.FromRgb(244, 246, 248));
         SetThemeBrush("AppSurfaceBrush", Color.FromRgb(255, 255, 255));
         SetThemeBrush("AppControlBackgroundBrush", Color.FromRgb(255, 255, 255));
-        SetThemeBrush("AppControlForegroundBrush", Color.FromRgb(23, 28, 34));
-        SetThemeBrush("AppSecondaryForegroundBrush", Color.FromRgb(54, 66, 79));
-        SetThemeBrush("AppBorderBrush", Color.FromRgb(216, 221, 229));
-        SetThemeBrush("AppAccentBrush", Color.FromRgb(46, 95, 181));
-        SetThemeBrush("AppDataGridAltRowBrush", Color.FromRgb(243, 246, 250));
-        SetThemeBrush("AppSelectionBrush", Color.FromRgb(204, 224, 255));
+        SetThemeBrush("AppControlForegroundBrush", Color.FromRgb(17, 24, 39));
+        SetThemeBrush("AppSecondaryForegroundBrush", Color.FromRgb(55, 65, 81));
+        SetThemeBrush("AppBorderBrush", Color.FromRgb(139, 147, 161));
+        SetThemeBrush("AppAccentBrush", Color.FromRgb(29, 78, 216));
+        SetThemeBrush("AppDataGridAltRowBrush", Color.FromRgb(238, 242, 247));
+        SetThemeBrush("AppSelectionBrush", Color.FromRgb(220, 235, 255));
+        SetThemeBrush("AppControlHoverBrush", Color.FromRgb(243, 247, 255));
+        SetThemeBrush("AppControlPressedBrush", Color.FromRgb(215, 231, 255));
+        SetThemeBrush("AppDisabledBackgroundBrush", Color.FromRgb(241, 243, 246));
+        SetThemeBrush("AppDisabledForegroundBrush", Color.FromRgb(99, 107, 120));
+        SetThemeBrush("AppFocusBrush", Color.FromRgb(29, 78, 216));
+        SetThemeBrush("AppTabActiveBackgroundBrush", Color.FromRgb(231, 240, 255));
     }
 
     private static void SetThemeBrush(string key, Color color)
@@ -343,9 +390,9 @@ public partial class MainWindow : Window
 
         if (useDarkTheme)
         {
-            var darkCaptionColor = ToColorRef(Color.FromRgb(26, 28, 32));
-            var darkBorderColor = ToColorRef(Color.FromRgb(26, 28, 32));
-            var lightTextColor = ToColorRef(Color.FromRgb(230, 233, 238));
+            var darkCaptionColor = ToColorRef(Color.FromRgb(22, 25, 31));
+            var darkBorderColor = ToColorRef(Color.FromRgb(22, 25, 31));
+            var lightTextColor = ToColorRef(Color.FromRgb(243, 244, 246));
 
             _ = DwmSetWindowAttribute(windowHandle, DwmCaptionColor, ref darkCaptionColor, sizeof(uint));
             _ = DwmSetWindowAttribute(windowHandle, DwmBorderColor, ref darkBorderColor, sizeof(uint));

@@ -4,15 +4,36 @@
              xmlns:local="clr-namespace:StarManager.App"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#F8F9FB" />
+        <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#F4F6F8" />
         <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFFFF" />
         <SolidColorBrush x:Key="AppControlBackgroundBrush" Color="#FFFFFFFF" />
-        <SolidColorBrush x:Key="AppControlForegroundBrush" Color="#171C22" />
-        <SolidColorBrush x:Key="AppSecondaryForegroundBrush" Color="#36424F" />
-        <SolidColorBrush x:Key="AppBorderBrush" Color="#D8DDE5" />
-        <SolidColorBrush x:Key="AppAccentBrush" Color="#2E5FB5" />
-        <SolidColorBrush x:Key="AppDataGridAltRowBrush" Color="#F3F6FA" />
-        <SolidColorBrush x:Key="AppSelectionBrush" Color="#CCE0FF" />
+        <SolidColorBrush x:Key="AppControlForegroundBrush" Color="#111827" />
+        <SolidColorBrush x:Key="AppSecondaryForegroundBrush" Color="#374151" />
+        <SolidColorBrush x:Key="AppBorderBrush" Color="#8B93A1" />
+        <SolidColorBrush x:Key="AppAccentBrush" Color="#1D4ED8" />
+        <SolidColorBrush x:Key="AppDataGridAltRowBrush" Color="#EEF2F7" />
+        <SolidColorBrush x:Key="AppSelectionBrush" Color="#DCEBFF" />
+        <SolidColorBrush x:Key="AppControlHoverBrush" Color="#F3F7FF" />
+        <SolidColorBrush x:Key="AppControlPressedBrush" Color="#D7E7FF" />
+        <SolidColorBrush x:Key="AppDisabledBackgroundBrush" Color="#F1F3F6" />
+        <SolidColorBrush x:Key="AppDisabledForegroundBrush" Color="#636B78" />
+        <SolidColorBrush x:Key="AppFocusBrush" Color="#1D4ED8" />
+        <SolidColorBrush x:Key="AppTabActiveBackgroundBrush" Color="#E7F0FF" />
+
+        <Style x:Key="AppKeyboardFocusVisualStyle" TargetType="Control">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Control">
+                        <Rectangle Margin="-2"
+                                   Stroke="{DynamicResource AppFocusBrush}"
+                                   StrokeThickness="2"
+                                   RadiusX="3"
+                                   RadiusY="3"
+                                   SnapsToDevicePixels="True" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style TargetType="Window">
             <Setter Property="Background" Value="{DynamicResource AppWindowBackgroundBrush}" />
@@ -28,6 +49,23 @@
             <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource AppKeyboardFocusVisualStyle}" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppControlHoverBrush}" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppControlPressedBrush}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppFocusBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource AppDisabledBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AppDisabledForegroundBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="TextBox">
@@ -35,6 +73,19 @@
             <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource AppKeyboardFocusVisualStyle}" />
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppFocusBrush}" />
+                </Trigger>
+                <Trigger Property="IsReadOnly" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource AppDisabledBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AppDisabledForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="ComboBox">
@@ -42,6 +93,16 @@
             <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource AppKeyboardFocusVisualStyle}" />
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppFocusBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource AppDisabledBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AppDisabledForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="TabControl">
@@ -54,6 +115,20 @@
             <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource AppKeyboardFocusVisualStyle}" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppTabActiveBackgroundBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppFocusBrush}" />
+                    <Setter Property="BorderThickness" Value="1" />
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppControlHoverBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{DynamicResource AppDisabledForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="DataGrid">
@@ -70,6 +145,9 @@
             <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
             <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppControlHoverBrush}" />
+                </Trigger>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{DynamicResource AppSelectionBrush}" />
                     <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
@@ -82,10 +160,15 @@
             <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource AppKeyboardFocusVisualStyle}" />
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{DynamicResource AppSelectionBrush}" />
                     <Setter Property="Foreground" Value="{DynamicResource AppControlForegroundBrush}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppFocusBrush}" />
+                    <Setter Property="BorderThickness" Value="1,1,1,1" />
                 </Trigger>
             </Style.Triggers>
         </Style>
