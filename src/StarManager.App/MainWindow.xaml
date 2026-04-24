@@ -70,11 +70,22 @@
                     Orientation="Horizontal"
                     VerticalAlignment="Center"
                     Margin="8,0,0,10">
+            <TextBlock Text="Recent"
+                   VerticalAlignment="Center"
+                   Margin="0,0,8,0" />
+            <ComboBox x:Name="RecentStarPathsComboBox"
+                  Width="260"
+                  Height="30"
+                  TabIndex="3"
+                  Margin="0,0,14,0"
+                  ItemsSource="{Binding RecentStarPaths}"
+                  SelectionChanged="RecentStarPathsComboBox_OnSelectionChanged" />
+
             <TextBlock Text="Theme"
                        VerticalAlignment="Center"
                        Margin="0,0,8,0" />
             <ComboBox x:Name="ThemeComboBox"
-                      TabIndex="3"
+                  TabIndex="4"
                       Width="120"
                       Height="30"
                       SelectionChanged="ThemeComboBox_OnSelectionChanged">

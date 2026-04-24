@@ -6,5 +6,7 @@ public sealed class AppSettings
 
     public string? LastStarRootPath { get; set; }
 
+    public List<string> RecentStarRootPaths { get; set; } = [];
+
     public List<string> InitializedProviderEntryPaths { get; set; } = [];
 }

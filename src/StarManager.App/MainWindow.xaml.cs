@@ -33,7 +33,10 @@ public partial class MainWindow : Window
     private bool _showOnlyNeedingSetup;
     private HashSet<string> _initializedProviderEntryPaths = new(StringComparer.OrdinalIgnoreCase);
 
+    private const int MaxRecentStarPaths = 10;
+
     public ObservableCollection<ProviderItem> Providers { get; } = [];
+    public ObservableCollection<string> RecentStarPaths { get; } = [];
     public ICollectionView ProvidersView { get; }
 
     public MainWindow()
@@ -99,8 +102,7 @@ public partial class MainWindow : Window
 
         _selectedStarRoot = dialog.FolderName;
         StarPathTextBox.Text = _selectedStarRoot;
-        _settings.LastStarRootPath = _selectedStarRoot;
-        _settingsService.Save(_settings);
+        AddRecentStarPath(_selectedStarRoot);
         StatusTextBlock.Text = "STAR folder selected. Click Scan to detect components.";
     }
 
@@ -319,6 +321,25 @@ public partial class MainWindow : Window
         _ = ProviderSearchTextBox.Focus();
     }
 
+    private void RecentStarPathsComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (RecentStarPathsComboBox.SelectedItem is not string selectedPath)
+        {
+            return;
+        }
+
+        if (!Directory.Exists(selectedPath))
+        {
+            StatusTextBlock.Text = "Selected recent STAR path no longer exists.";
+            return;
+        }
+
+        _selectedStarRoot = selectedPath;
+        StarPathTextBox.Text = selectedPath;
+        AddRecentStarPath(selectedPath);
+        StatusTextBlock.Text = "Recent STAR setup selected. Click Scan to refresh components.";
+    }
+
     private bool ProviderMatchesSearchQuery(object item)
     {
         if (item is not ProviderItem provider)
@@ -513,10 +534,17 @@ public partial class MainWindow : Window
                 ? new HashSet<string>(_settings.InitializedProviderEntryPaths, StringComparer.OrdinalIgnoreCase)
                 : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        RefreshRecentStarPaths(_settings.RecentStarRootPaths ?? []);
+
         if (!string.IsNullOrWhiteSpace(_settings.LastStarRootPath) && Directory.Exists(_settings.LastStarRootPath))
         {
             _selectedStarRoot = _settings.LastStarRootPath;
             StarPathTextBox.Text = _selectedStarRoot;
+            if (RecentStarPaths.Contains(_selectedStarRoot))
+            {
+                RecentStarPathsComboBox.SelectedItem = _selectedStarRoot;
+            }
+
             StatusTextBlock.Text = "Loaded last STAR folder from settings. Click Scan to refresh components.";
         }
 
@@ -552,6 +580,57 @@ public partial class MainWindow : Window
         CoagulatorStatusTextBlock.Text = _coagulatorProcessService.IsRunning
             ? "Coagulator: Running"
             : "Coagulator: Stopped";
+    }
+
+    private void AddRecentStarPath(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+
+        var existing = RecentStarPaths
+            .FirstOrDefault(existingPath => string.Equals(existingPath, fullPath, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is not null)
+        {
+            _ = RecentStarPaths.Remove(existing);
+        }
+
+        RecentStarPaths.Insert(0, fullPath);
+
+        while (RecentStarPaths.Count > MaxRecentStarPaths)
+        {
+            RecentStarPaths.RemoveAt(RecentStarPaths.Count - 1);
+        }
+
+        _settings.LastStarRootPath = fullPath;
+        _settings.RecentStarRootPaths = RecentStarPaths.ToList();
+        _settingsService.Save(_settings);
+
+        RecentStarPathsComboBox.SelectedItem = fullPath;
+    }
+
+    private void RefreshRecentStarPaths(IEnumerable<string> paths)
+    {
+        RecentStarPaths.Clear();
+
+        foreach (var path in paths)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            {
+                continue;
+            }
+
+            if (RecentStarPaths.Any(existing => string.Equals(existing, path, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            RecentStarPaths.Add(path);
+
+            if (RecentStarPaths.Count >= MaxRecentStarPaths)
+            {
+                break;
+            }
+        }
     }
 
 
