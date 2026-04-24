@@ -103,6 +103,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,10">
@@ -169,6 +170,7 @@
                     <DataGrid x:Name="ProvidersDataGrid"
                               Grid.Row="2"
                               TabIndex="10"
+                              KeyboardNavigation.TabNavigation="Once"
                               ItemsSource="{Binding ProvidersView}"
                               AutoGenerateColumns="False"
                               CanUserAddRows="False"
@@ -176,7 +178,8 @@
                               HeadersVisibility="Column"
                               RowHeaderWidth="0"
                               GridLinesVisibility="Horizontal"
-                              SelectionMode="Single">
+                              SelectionMode="Single"
+                              SelectionChanged="ProvidersDataGrid_OnSelectionChanged">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Provider" Binding="{Binding Name}" Width="2*" />
                             <DataGridTextColumn Header="Hint" Binding="{Binding FirstLaunchHint}" Width="*" />
@@ -248,7 +251,35 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Expander Grid.Row="3"
+                        <WrapPanel Grid.Row="3" Margin="0,10,0,0">
+                        <TextBlock x:Name="SelectedProviderTextBlock"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"
+                               FontWeight="SemiBold"
+                               Text="Selected provider: none" />
+
+                        <Button x:Name="ConfigureSelectedProviderButton"
+                            Content="Configure selected"
+                            TabIndex="11"
+                            IsEnabled="False"
+                            Margin="0,0,8,0"
+                            Click="ConfigureSelectedProviderButton_OnClick" />
+
+                        <Button x:Name="StartSelectedProviderButton"
+                            Content="Start selected"
+                            TabIndex="12"
+                            IsEnabled="False"
+                            Margin="0,0,8,0"
+                            Click="StartSelectedProviderButton_OnClick" />
+
+                        <Button x:Name="StopSelectedProviderButton"
+                            Content="Stop selected"
+                            TabIndex="13"
+                            IsEnabled="False"
+                            Click="StopSelectedProviderButton_OnClick" />
+                        </WrapPanel>
+
+                        <Expander Grid.Row="4"
                               Margin="0,10,0,0"
                               Header="Scan diagnostics"
                               IsExpanded="False">

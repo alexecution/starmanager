@@ -33,6 +33,7 @@ public partial class MainWindow : Window
     private bool _showOnlyNeedingSetup;
     private bool _isUpdatingRecentStarPathSelection;
     private HashSet<string> _initializedProviderEntryPaths = new(StringComparer.OrdinalIgnoreCase);
+    private ProviderItem? _selectedProvider;
 
     private const int MaxRecentStarPaths = 10;
 
@@ -130,6 +131,9 @@ public partial class MainWindow : Window
             ProvidersView.Refresh();
             ScanDiagnosticsTextBox.Text = string.Join(Environment.NewLine, _scanResult.Diagnostics);
 
+            ProvidersDataGrid.SelectedIndex = Providers.Count > 0 ? 0 : -1;
+            UpdateSelectedProviderState();
+
             StatusTextBlock.Text =
                 $"Scan complete: {_scanResult.Providers.Count} provider(s) found. " +
                 $"STAR app: {(string.IsNullOrWhiteSpace(_scanResult.StarAppEntryPath) ? "missing" : "found")}. " +
@@ -149,6 +153,80 @@ public partial class MainWindow : Window
             return;
         }
 
+        ExecuteConfigureProvider(provider);
+    }
+
+    private void StartProviderButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetProviderFromButton(sender, out var provider))
+        {
+            return;
+        }
+
+        ExecuteStartProvider(provider);
+    }
+
+    private async void StopProviderButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetProviderFromButton(sender, out var provider))
+        {
+            return;
+        }
+
+        await ExecuteStopProviderAsync(provider);
+    }
+
+    private void ProvidersDataGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateSelectedProviderState();
+    }
+
+    private void ConfigureSelectedProviderButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProvider is null)
+        {
+            return;
+        }
+
+        ExecuteConfigureProvider(_selectedProvider);
+    }
+
+    private void StartSelectedProviderButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProvider is null)
+        {
+            return;
+        }
+
+        ExecuteStartProvider(_selectedProvider);
+    }
+
+    private async void StopSelectedProviderButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProvider is null)
+        {
+            return;
+        }
+
+        await ExecuteStopProviderAsync(_selectedProvider);
+    }
+
+    private void UpdateSelectedProviderState()
+    {
+        _selectedProvider = ProvidersDataGrid.SelectedItem as ProviderItem;
+
+        var hasSelection = _selectedProvider is not null;
+        ConfigureSelectedProviderButton.IsEnabled = hasSelection;
+        StartSelectedProviderButton.IsEnabled = hasSelection;
+        StopSelectedProviderButton.IsEnabled = hasSelection;
+
+        SelectedProviderTextBlock.Text = hasSelection
+            ? $"Selected provider: {_selectedProvider!.Name}"
+            : "Selected provider: none";
+    }
+
+    private void ExecuteConfigureProvider(ProviderItem provider)
+    {
         try
         {
             _providerProcessService.LaunchConfigure(provider);
@@ -161,13 +239,8 @@ public partial class MainWindow : Window
         }
     }
 
-    private void StartProviderButton_OnClick(object sender, RoutedEventArgs e)
+    private void ExecuteStartProvider(ProviderItem provider)
     {
-        if (!TryGetProviderFromButton(sender, out var provider))
-        {
-            return;
-        }
-
         try
         {
             _providerProcessService.StartProvider(provider);
@@ -181,12 +254,8 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void StopProviderButton_OnClick(object sender, RoutedEventArgs e)
+    private async Task ExecuteStopProviderAsync(ProviderItem provider)
     {
-        if (!TryGetProviderFromButton(sender, out var provider))
-        {
-            return;
-        }
 
         try
         {
