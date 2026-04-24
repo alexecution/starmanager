@@ -202,66 +202,113 @@ public sealed class StarDiscoveryService
             return [];
         }
 
-        var providers = new List<ProviderItem>();
+        var providerByName = new Dictionary<string, ProviderItem>(StringComparer.OrdinalIgnoreCase);
 
         var pythonProviderCandidates = Directory
             .GetFiles(rootDirectory, "*.py", SearchOption.TopDirectoryOnly)
             .Where(IsRootLevelProviderCandidate)
             .ToArray();
 
-        // If provider scripts exist, prefer those and ignore helper executables in the same root.
-        if (pythonProviderCandidates.Length > 0)
-        {
-            foreach (var filePath in pythonProviderCandidates)
-            {
-                providers.Add(new ProviderItem
-                {
-                    Name = Path.GetFileNameWithoutExtension(filePath),
-                    FolderPath = rootDirectory,
-                    EntryPath = filePath,
-                    IsExecutable = false,
-                });
-            }
+        var executableProviderCandidates = Directory
+            .GetFiles(rootDirectory, "*.exe", SearchOption.TopDirectoryOnly)
+            .Where(IsRootLevelProviderCandidate)
+            .ToArray();
 
-            diagnostics.Add($"Detected {providers.Count} root-level provider script(s); helper executables were ignored.");
-            return providers
-                .OrderBy(static provider => provider.Name, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
+        var pythonProviderNames = pythonProviderCandidates
+            .Select(static path => Path.GetFileNameWithoutExtension(path) ?? string.Empty)
+            .Where(static name => name.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // Fallback for binary-only layouts.
-        foreach (var filePath in Directory.GetFiles(rootDirectory, "*.exe", SearchOption.TopDirectoryOnly)
-                     .Where(IsRootLevelProviderCandidate))
+        var providerConfigNames = Directory
+            .GetFiles(rootDirectory, "*.ini", SearchOption.TopDirectoryOnly)
+            .Select(static path => Path.GetFileNameWithoutExtension(path) ?? string.Empty)
+            .Where(static name => name.Length > 0)
+            .Where(static name => !name.Equals("coagulator", StringComparison.OrdinalIgnoreCase)
+                && !name.Equals("STAR", StringComparison.OrdinalIgnoreCase))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var filePath in pythonProviderCandidates)
         {
-            var extension = Path.GetExtension(filePath);
             var providerName = Path.GetFileNameWithoutExtension(filePath);
-
             if (string.IsNullOrWhiteSpace(providerName))
             {
                 continue;
             }
 
-            providers.Add(new ProviderItem
+            providerByName[providerName] = new ProviderItem
             {
                 Name = providerName,
                 FolderPath = rootDirectory,
                 EntryPath = filePath,
-                IsExecutable = extension.Equals(".exe", StringComparison.OrdinalIgnoreCase),
-            });
+                IsExecutable = false,
+            };
         }
 
-        if (providers.Count == 0)
+        var skippedHelperExecutableCount = 0;
+        foreach (var filePath in executableProviderCandidates)
+        {
+            var providerName = Path.GetFileNameWithoutExtension(filePath);
+            if (string.IsNullOrWhiteSpace(providerName))
+            {
+                continue;
+            }
+
+            if (!ShouldIncludeRootExecutableProvider(providerName, pythonProviderNames, providerConfigNames, pythonProviderCandidates.Length > 0))
+            {
+                skippedHelperExecutableCount++;
+                continue;
+            }
+
+            var executableProvider = new ProviderItem
+            {
+                Name = providerName,
+                FolderPath = rootDirectory,
+                EntryPath = filePath,
+                IsExecutable = true,
+            };
+
+            // Prefer executable launchers when both .py and .exe provider entry files exist.
+            providerByName[providerName] = executableProvider;
+        }
+
+        var providers = providerByName.Values
+            .OrderBy(static provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (providers.Length == 0)
         {
             diagnostics.Add("No root-level provider entry files were detected.");
         }
         else
         {
-            diagnostics.Add($"Detected {providers.Count} root-level provider(s).");
+            diagnostics.Add($"Detected {providers.Length} root-level provider(s).");
+            if (skippedHelperExecutableCount > 0)
+            {
+                diagnostics.Add($"Filtered out {skippedHelperExecutableCount} helper/root executable(s) not matching provider patterns.");
+            }
         }
 
-        return providers
-            .OrderBy(static provider => provider.Name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        return providers;
+    }
+
+    private static bool ShouldIncludeRootExecutableProvider(
+        string providerName,
+        HashSet<string> pythonProviderNames,
+        HashSet<string> providerConfigNames,
+        bool hasPythonProviders)
+    {
+        if (!hasPythonProviders)
+        {
+            return true;
+        }
+
+        if (pythonProviderNames.Contains(providerName) || providerConfigNames.Contains(providerName))
+        {
+            return true;
+        }
+
+        return providerName.EndsWith("_star", StringComparison.OrdinalIgnoreCase)
+            || providerName.StartsWith("star_", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsRootLevelProviderCandidate(string filePath)
