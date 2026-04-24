@@ -27,9 +27,9 @@ public sealed class StarDiscoveryService
         var coagulatorDirectory = ResolveDirectory(normalizedRoot, CoagulatorDirectoryName);
         var userDirectory = ResolveDirectory(normalizedRoot, UserDirectoryName);
 
-        var providers = DiscoverProviders(providerDirectory, diagnostics);
-        var starAppEntryPath = DetectStarUserAppEntry(userDirectory);
-        var coagulatorEntryPath = DetectCoagulatorEntry(coagulatorDirectory);
+        var providers = DiscoverProviders(providerDirectory, normalizedRoot, diagnostics);
+        var starAppEntryPath = DetectStarUserAppEntry(userDirectory, normalizedRoot);
+        var coagulatorEntryPath = DetectCoagulatorEntry(coagulatorDirectory, normalizedRoot);
         var coagulatorWebsiteUrl = DetectCoagulatorWebsiteUrl(coagulatorDirectory);
 
         diagnostics.Add($"Provider count: {providers.Count}");
@@ -77,12 +77,12 @@ public sealed class StarDiscoveryService
         return Directory.Exists(direct) ? direct : null;
     }
 
-    private static IReadOnlyList<ProviderItem> DiscoverProviders(string? providerDirectory, List<string> diagnostics)
+    private static IReadOnlyList<ProviderItem> DiscoverProviders(string? providerDirectory, string rootDirectory, List<string> diagnostics)
     {
         if (string.IsNullOrWhiteSpace(providerDirectory) || !Directory.Exists(providerDirectory))
         {
-            diagnostics.Add("Provider scan skipped: no provider directory exists.");
-            return [];
+            diagnostics.Add("Provider directory not found, attempting root-folder provider discovery.");
+            return DiscoverRootLevelProviders(rootDirectory, diagnostics);
         }
 
         var providers = new List<ProviderItem>();
@@ -194,45 +194,158 @@ public sealed class StarDiscoveryService
             .FirstOrDefault();
     }
 
-    private static string? DetectStarUserAppEntry(string? userDirectory)
+    private static IReadOnlyList<ProviderItem> DiscoverRootLevelProviders(string rootDirectory, List<string> diagnostics)
     {
-        if (string.IsNullOrWhiteSpace(userDirectory) || !Directory.Exists(userDirectory))
+        if (!Directory.Exists(rootDirectory))
         {
-            return null;
+            diagnostics.Add("Root-level provider discovery failed: root directory does not exist.");
+            return [];
         }
 
-        var preferredExe = Path.Combine(userDirectory, "STAR.exe");
-        if (File.Exists(preferredExe))
+        var providers = new List<ProviderItem>();
+
+        var pythonProviderCandidates = Directory
+            .GetFiles(rootDirectory, "*.py", SearchOption.TopDirectoryOnly)
+            .Where(IsRootLevelProviderCandidate)
+            .ToArray();
+
+        // If provider scripts exist, prefer those and ignore helper executables in the same root.
+        if (pythonProviderCandidates.Length > 0)
         {
-            return preferredExe;
+            foreach (var filePath in pythonProviderCandidates)
+            {
+                providers.Add(new ProviderItem
+                {
+                    Name = Path.GetFileNameWithoutExtension(filePath),
+                    FolderPath = rootDirectory,
+                    EntryPath = filePath,
+                    IsExecutable = false,
+                });
+            }
+
+            diagnostics.Add($"Detected {providers.Count} root-level provider script(s); helper executables were ignored.");
+            return providers
+                .OrderBy(static provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
         }
 
-        var preferredPy = Path.Combine(userDirectory, "STAR.py");
-        if (File.Exists(preferredPy))
+        // Fallback for binary-only layouts.
+        foreach (var filePath in Directory.GetFiles(rootDirectory, "*.exe", SearchOption.TopDirectoryOnly)
+                     .Where(IsRootLevelProviderCandidate))
         {
-            return preferredPy;
+            var extension = Path.GetExtension(filePath);
+            var providerName = Path.GetFileNameWithoutExtension(filePath);
+
+            if (string.IsNullOrWhiteSpace(providerName))
+            {
+                continue;
+            }
+
+            providers.Add(new ProviderItem
+            {
+                Name = providerName,
+                FolderPath = rootDirectory,
+                EntryPath = filePath,
+                IsExecutable = extension.Equals(".exe", StringComparison.OrdinalIgnoreCase),
+            });
+        }
+
+        if (providers.Count == 0)
+        {
+            diagnostics.Add("No root-level provider entry files were detected.");
+        }
+        else
+        {
+            diagnostics.Add($"Detected {providers.Count} root-level provider(s).");
+        }
+
+        return providers
+            .OrderBy(static provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool IsRootLevelProviderCandidate(string filePath)
+    {
+        var extension = Path.GetExtension(filePath);
+        if (!extension.Equals(".py", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var providerName = Path.GetFileNameWithoutExtension(filePath);
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return false;
+        }
+
+        return !providerName.Equals("STAR", StringComparison.OrdinalIgnoreCase)
+            && !providerName.Equals("coagulator", StringComparison.OrdinalIgnoreCase)
+            && !providerName.Equals("provider", StringComparison.OrdinalIgnoreCase)
+            && !providerName.Equals("readme", StringComparison.OrdinalIgnoreCase)
+            && !providerName.Equals("html_readme", StringComparison.OrdinalIgnoreCase)
+            && !providerName.Equals("build", StringComparison.OrdinalIgnoreCase)
+            && !providerName.Equals("setup", StringComparison.OrdinalIgnoreCase)
+            && !providerName.Equals("run", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? DetectStarUserAppEntry(string? userDirectory, string rootDirectory)
+    {
+        var candidateDirectories = new[]
+        {
+            userDirectory,
+            rootDirectory,
+        };
+
+        foreach (var candidateDirectory in candidateDirectories)
+        {
+            if (string.IsNullOrWhiteSpace(candidateDirectory) || !Directory.Exists(candidateDirectory))
+            {
+                continue;
+            }
+
+            var preferredExe = Path.Combine(candidateDirectory, "STAR.exe");
+            if (File.Exists(preferredExe))
+            {
+                return preferredExe;
+            }
+
+            var preferredPy = Path.Combine(candidateDirectory, "STAR.py");
+            if (File.Exists(preferredPy))
+            {
+                return preferredPy;
+            }
         }
 
         return null;
     }
 
-    private static string? DetectCoagulatorEntry(string? coagulatorDirectory)
+    private static string? DetectCoagulatorEntry(string? coagulatorDirectory, string rootDirectory)
     {
-        if (string.IsNullOrWhiteSpace(coagulatorDirectory) || !Directory.Exists(coagulatorDirectory))
+        var candidateDirectories = new[]
         {
-            return null;
-        }
+            coagulatorDirectory,
+            rootDirectory,
+        };
 
-        var preferredExe = Path.Combine(coagulatorDirectory, "coagulator.exe");
-        if (File.Exists(preferredExe))
+        foreach (var candidateDirectory in candidateDirectories)
         {
-            return preferredExe;
-        }
+            if (string.IsNullOrWhiteSpace(candidateDirectory) || !Directory.Exists(candidateDirectory))
+            {
+                continue;
+            }
 
-        var preferredPy = Path.Combine(coagulatorDirectory, "coagulator.py");
-        if (File.Exists(preferredPy))
-        {
-            return preferredPy;
+            var preferredExe = Path.Combine(candidateDirectory, "coagulator.exe");
+            if (File.Exists(preferredExe))
+            {
+                return preferredExe;
+            }
+
+            var preferredPy = Path.Combine(candidateDirectory, "coagulator.py");
+            if (File.Exists(preferredPy))
+            {
+                return preferredPy;
+            }
         }
 
         return null;
