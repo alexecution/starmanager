@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     private ProviderItem? _selectedProvider;
 
     private const int MaxRecentStarPaths = 10;
+    private const int MaxActivityLogLines = 300;
 
     public ObservableCollection<ProviderItem> Providers { get; } = [];
     public ObservableCollection<string> RecentStarPaths { get; } = [];
@@ -107,14 +108,14 @@ public partial class MainWindow : Window
         _selectedStarRoot = dialog.FolderName;
         StarPathTextBox.Text = _selectedStarRoot;
         AddRecentStarPath(_selectedStarRoot);
-        StatusTextBlock.Text = "STAR folder selected. Click Scan to detect components.";
+        LogStatus("STAR folder selected. Click Scan to detect components.");
     }
 
     private void ScanButton_OnClick(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(_selectedStarRoot))
         {
-            StatusTextBlock.Text = "Select a STAR folder first.";
+            LogStatus("Select a STAR folder first.");
             return;
         }
 
@@ -136,15 +137,16 @@ public partial class MainWindow : Window
             ProvidersDataGrid.SelectedIndex = Providers.Count > 0 ? 0 : -1;
             UpdateSelectedProviderState();
 
-            StatusTextBlock.Text =
+            LogStatus(
                 $"Scan complete: {_scanResult.Providers.Count} provider(s) found. " +
                 $"STAR app: {(string.IsNullOrWhiteSpace(_scanResult.StarAppEntryPath) ? "missing" : "found")}. " +
-                $"Coagulator: {(string.IsNullOrWhiteSpace(_scanResult.CoagulatorEntryPath) ? "missing" : "found")}.";
+                $"Coagulator: {(string.IsNullOrWhiteSpace(_scanResult.CoagulatorEntryPath) ? "missing" : "found")}."
+            );
         }
         catch (Exception ex)
         {
             ScanDiagnosticsTextBox.Text = ex.ToString();
-            StatusTextBlock.Text = $"Scan failed: {ex.Message}";
+            LogStatus($"Scan failed: {ex.Message}", isError: true);
         }
     }
 
@@ -233,11 +235,11 @@ public partial class MainWindow : Window
         {
             _providerProcessService.LaunchConfigure(provider);
             MarkProviderInitialized(provider);
-            StatusTextBlock.Text = $"Opened configure UI for provider '{provider.Name}'.";
+            LogStatus($"Opened configure UI for provider '{provider.Name}'.");
         }
         catch (Exception ex)
         {
-            StatusTextBlock.Text = $"Could not configure '{provider.Name}': {ex.Message}";
+            LogStatus($"Could not configure '{provider.Name}': {ex.Message}", isError: true);
         }
     }
 
@@ -248,11 +250,11 @@ public partial class MainWindow : Window
             _providerProcessService.StartProvider(provider);
             MarkProviderInitialized(provider);
             provider.StatusText = "Running";
-            StatusTextBlock.Text = $"Started provider '{provider.Name}'.";
+            LogStatus($"Started provider '{provider.Name}'.");
         }
         catch (Exception ex)
         {
-            StatusTextBlock.Text = $"Could not start '{provider.Name}': {ex.Message}";
+            LogStatus($"Could not start '{provider.Name}': {ex.Message}", isError: true);
         }
     }
 
@@ -263,11 +265,11 @@ public partial class MainWindow : Window
         {
             await _providerProcessService.StopProviderAsync(provider);
             provider.StatusText = "Stopped";
-            StatusTextBlock.Text = $"Stopped provider '{provider.Name}'.";
+            LogStatus($"Stopped provider '{provider.Name}'.");
         }
         catch (Exception ex)
         {
-            StatusTextBlock.Text = $"Could not stop '{provider.Name}': {ex.Message}";
+            LogStatus($"Could not stop '{provider.Name}': {ex.Message}", isError: true);
         }
     }
 
@@ -275,7 +277,7 @@ public partial class MainWindow : Window
     {
         if (_scanResult is null || string.IsNullOrWhiteSpace(_scanResult.StarAppEntryPath))
         {
-            StatusTextBlock.Text = "STAR app entrypoint was not detected in this setup.";
+            LogStatus("STAR app entrypoint was not detected in this setup.", isError: true);
             return;
         }
 
@@ -285,11 +287,11 @@ public partial class MainWindow : Window
             _ = Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Could not launch STAR app process.");
 
-            StatusTextBlock.Text = "STAR app launched.";
+            LogStatus("STAR app launched.");
         }
         catch (Exception ex)
         {
-            StatusTextBlock.Text = $"Could not launch STAR app: {ex.Message}";
+            LogStatus($"Could not launch STAR app: {ex.Message}", isError: true);
         }
     }
 
@@ -297,7 +299,7 @@ public partial class MainWindow : Window
     {
         if (_scanResult is null || string.IsNullOrWhiteSpace(_scanResult.CoagulatorWebsiteUrl))
         {
-            StatusTextBlock.Text = "No coagulator website URL was detected from configuration.";
+            LogStatus("No coagulator website URL was detected from configuration.", isError: true);
             return;
         }
 
@@ -309,11 +311,11 @@ public partial class MainWindow : Window
                 UseShellExecute = true,
             });
 
-            StatusTextBlock.Text = "Opened coagulator website.";
+            LogStatus("Opened coagulator website.");
         }
         catch (Exception ex)
         {
-            StatusTextBlock.Text = $"Could not open website: {ex.Message}";
+            LogStatus($"Could not open website: {ex.Message}", isError: true);
         }
     }
 
@@ -339,7 +341,7 @@ public partial class MainWindow : Window
     {
         if (_scanResult is null || string.IsNullOrWhiteSpace(_scanResult.CoagulatorEntryPath))
         {
-            StatusTextBlock.Text = "Coagulator entrypoint was not detected in this setup.";
+            LogStatus("Coagulator entrypoint was not detected in this setup.", isError: true);
             return;
         }
 
@@ -347,11 +349,11 @@ public partial class MainWindow : Window
         {
             _coagulatorProcessService.Start(_scanResult.CoagulatorEntryPath);
             UpdateCoagulatorStatusText();
-            StatusTextBlock.Text = "Coagulator started.";
+            LogStatus("Coagulator started.");
         }
         catch (Exception ex)
         {
-            StatusTextBlock.Text = $"Could not start coagulator: {ex.Message}";
+            LogStatus($"Could not start coagulator: {ex.Message}", isError: true);
         }
     }
 
@@ -361,11 +363,11 @@ public partial class MainWindow : Window
         {
             await _coagulatorProcessService.StopAsync();
             UpdateCoagulatorStatusText();
-            StatusTextBlock.Text = "Coagulator stopped.";
+            LogStatus("Coagulator stopped.");
         }
         catch (Exception ex)
         {
-            StatusTextBlock.Text = $"Could not stop coagulator: {ex.Message}";
+            LogStatus($"Could not stop coagulator: {ex.Message}", isError: true);
         }
     }
 
@@ -414,14 +416,14 @@ public partial class MainWindow : Window
 
         if (!Directory.Exists(selectedPath))
         {
-            StatusTextBlock.Text = "Selected recent STAR path no longer exists.";
+            LogStatus("Selected recent STAR path no longer exists.", isError: true);
             return;
         }
 
         _selectedStarRoot = selectedPath;
         StarPathTextBox.Text = selectedPath;
         AddRecentStarPath(selectedPath);
-        StatusTextBlock.Text = "Recent STAR setup selected. Click Scan to refresh components.";
+        LogStatus("Recent STAR setup selected. Click Scan to refresh components.");
     }
 
     private bool ProviderMatchesSearchQuery(object item)
@@ -629,7 +631,7 @@ public partial class MainWindow : Window
                 RecentStarPathsComboBox.SelectedItem = _selectedStarRoot;
             }
 
-            StatusTextBlock.Text = "Loaded last STAR folder from settings. Click Scan to refresh components.";
+            LogStatus("Loaded last STAR folder from settings. Click Scan to refresh components.");
         }
 
         var themeName = string.IsNullOrWhiteSpace(_settings.ThemeName) ? "System" : _settings.ThemeName;
@@ -723,6 +725,50 @@ public partial class MainWindow : Window
                 break;
             }
         }
+    }
+
+    private void ClearActivityLogButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ActivityLogTextBox.Clear();
+        LogStatus("Activity log cleared.", includeInLog: false);
+    }
+
+    private void LogStatus(string message, bool isError = false, bool includeInLog = true)
+    {
+        StatusTextBlock.Text = message;
+
+        if (!includeInLog)
+        {
+            return;
+        }
+
+        var severity = isError ? "ERROR" : "INFO";
+        var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {severity}: {message}";
+
+        if (string.IsNullOrWhiteSpace(ActivityLogTextBox.Text))
+        {
+            ActivityLogTextBox.Text = line;
+        }
+        else
+        {
+            ActivityLogTextBox.AppendText(Environment.NewLine + line);
+        }
+
+        TrimActivityLogToLimit();
+        ActivityLogTextBox.ScrollToEnd();
+    }
+
+    private void TrimActivityLogToLimit()
+    {
+        var lines = ActivityLogTextBox.Text
+            .Split(Environment.NewLine, StringSplitOptions.None);
+
+        if (lines.Length <= MaxActivityLogLines)
+        {
+            return;
+        }
+
+        ActivityLogTextBox.Text = string.Join(Environment.NewLine, lines[^MaxActivityLogLines..]);
     }
 
 
