@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private bool _isDarkThemeActive;
     private string _providerSearchQuery = string.Empty;
     private bool _showOnlyNeedingSetup;
+    private bool _isUpdatingRecentStarPathSelection;
     private HashSet<string> _initializedProviderEntryPaths = new(StringComparer.OrdinalIgnoreCase);
 
     private const int MaxRecentStarPaths = 10;
@@ -323,6 +324,11 @@ public partial class MainWindow : Window
 
     private void RecentStarPathsComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_isUpdatingRecentStarPathSelection)
+        {
+            return;
+        }
+
         if (RecentStarPathsComboBox.SelectedItem is not string selectedPath)
         {
             return;
@@ -605,7 +611,15 @@ public partial class MainWindow : Window
         _settings.RecentStarRootPaths = RecentStarPaths.ToList();
         _settingsService.Save(_settings);
 
-        RecentStarPathsComboBox.SelectedItem = fullPath;
+        _isUpdatingRecentStarPathSelection = true;
+        try
+        {
+            RecentStarPathsComboBox.SelectedItem = fullPath;
+        }
+        finally
+        {
+            _isUpdatingRecentStarPathSelection = false;
+        }
     }
 
     private void RefreshRecentStarPaths(IEnumerable<string> paths)
