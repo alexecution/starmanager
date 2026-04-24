@@ -1,8 +1,6 @@
-# STAR Utility
+# STAR Manager
 
-STAR Utility is a Windows desktop manager for Speech To Audio Relay (STAR).
-
-The goal is to make STAR setup and day-to-day management easier by providing a graphical interface for provider discovery, configuration, and process control.
+STAR Manager is a Windows desktop manager for Speech To Audio Relay (STAR) which aims to make STAR setup and day-to-day management easier by providing a graphical interface for provider discovery, configuration, and process control.
 
 ## Current status
 
