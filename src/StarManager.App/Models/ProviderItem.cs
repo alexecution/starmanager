@@ -6,6 +6,7 @@ namespace StarManager.App.Models;
 public sealed class ProviderItem : INotifyPropertyChanged
 {
     private string _statusText = "Stopped";
+    private bool _requiresConfigureFirst = true;
 
     public required string Name { get; init; }
 
@@ -29,6 +30,24 @@ public sealed class ProviderItem : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    public bool RequiresConfigureFirst
+    {
+        get => _requiresConfigureFirst;
+        set
+        {
+            if (_requiresConfigureFirst == value)
+            {
+                return;
+            }
+
+            _requiresConfigureFirst = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(FirstLaunchHint));
+        }
+    }
+
+    public string FirstLaunchHint => RequiresConfigureFirst ? "Configure first" : string.Empty;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

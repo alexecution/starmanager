@@ -89,27 +89,75 @@
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <WrapPanel Grid.Row="0" Margin="0,0,0,10">
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="280" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Provider filter"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0" />
+
+                        <TextBox x:Name="ProviderSearchTextBox"
+                                 Grid.Column="1"
+                                 Height="32"
+                                 VerticalContentAlignment="Center"
+                                 TabIndex="5"
+                                 Margin="0,0,8,0"
+                                 ToolTip="Type part of a provider name to filter the list"
+                                 TextChanged="ProviderSearchTextBox_OnTextChanged" />
+
+                        <Button x:Name="ClearProviderSearchButton"
+                                Grid.Column="2"
+                                Content="Clear"
+                                Height="32"
+                                TabIndex="6"
+                                Padding="12,0"
+                                Click="ClearProviderSearchButton_OnClick" />
+
+                        <CheckBox x:Name="ShowNeedingSetupOnlyCheckBox"
+                              Grid.Column="3"
+                              Content="Show only needing setup"
+                              VerticalAlignment="Center"
+                              Margin="12,0,10,0"
+                              TabIndex="7"
+                              Checked="ShowNeedingSetupOnlyCheckBox_OnCheckedChanged"
+                              Unchecked="ShowNeedingSetupOnlyCheckBox_OnCheckedChanged" />
+
+                        <TextBlock Grid.Column="4"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0,0,0"
+                                   Foreground="{DynamicResource AppSecondaryForegroundBrush}"
+                                   Text="Tip: providers show 'Configure first' until configured or started once." />
+                    </Grid>
+
+                    <WrapPanel Grid.Row="1" Margin="0,0,0,10">
                         <Button Content="Launch _STAR App"
-                            TabIndex="5"
+                            TabIndex="8"
                                 Height="34"
                                 Padding="14,0"
                                 Margin="0,0,10,0"
                                 Click="LaunchStarAppButton_OnClick" />
                         <Button Content="Open _Coagulator Website"
-                            TabIndex="6"
+                            TabIndex="9"
                                 Height="34"
                                 Padding="14,0"
                                 Click="OpenCoagulatorWebsiteButton_OnClick" />
                     </WrapPanel>
 
                     <DataGrid x:Name="ProvidersDataGrid"
-                              Grid.Row="1"
-                              TabIndex="7"
-                              ItemsSource="{Binding Providers}"
+                              Grid.Row="2"
+                              TabIndex="10"
+                              ItemsSource="{Binding ProvidersView}"
                               AutoGenerateColumns="False"
                               CanUserAddRows="False"
                               IsReadOnly="True"
@@ -119,9 +167,46 @@
                               SelectionMode="Single">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Provider" Binding="{Binding Name}" Width="2*" />
+                            <DataGridTextColumn Header="Hint" Binding="{Binding FirstLaunchHint}" Width="*" />
                             <DataGridTextColumn Header="Folder" Binding="{Binding FolderPath}" Width="3*" />
                             <DataGridTextColumn Header="Entry" Binding="{Binding EntryPath}" Width="3*" />
-                            <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="*" />
+
+                            <DataGridTemplateColumn Header="Status" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type models:ProviderItem}">
+                                        <Border Padding="8,3"
+                                                CornerRadius="11"
+                                                BorderThickness="1"
+                                                HorizontalAlignment="Left">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{DynamicResource AppBadgeStoppedBackgroundBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AppBadgeStoppedBorderBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding StatusText}" Value="Running">
+                                                            <Setter Property="Background" Value="{DynamicResource AppBadgeRunningBackgroundBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource AppBadgeRunningBorderBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+
+                                            <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource AppBadgeStoppedForegroundBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding StatusText}" Value="Running">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AppBadgeRunningForegroundBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
 
                             <DataGridTemplateColumn Header="Actions" Width="3*">
                                 <DataGridTemplateColumn.CellTemplate>

@@ -19,6 +19,12 @@
         <SolidColorBrush x:Key="AppDisabledForegroundBrush" Color="#636B78" />
         <SolidColorBrush x:Key="AppFocusBrush" Color="#1D4ED8" />
         <SolidColorBrush x:Key="AppTabActiveBackgroundBrush" Color="#E7F0FF" />
+        <SolidColorBrush x:Key="AppBadgeRunningBackgroundBrush" Color="#E8F7EE" />
+        <SolidColorBrush x:Key="AppBadgeRunningForegroundBrush" Color="#0F5132" />
+        <SolidColorBrush x:Key="AppBadgeRunningBorderBrush" Color="#79C69B" />
+        <SolidColorBrush x:Key="AppBadgeStoppedBackgroundBrush" Color="#F1F3F6" />
+        <SolidColorBrush x:Key="AppBadgeStoppedForegroundBrush" Color="#374151" />
+        <SolidColorBrush x:Key="AppBadgeStoppedBorderBrush" Color="#9CA3AF" />
 
         <Style x:Key="AppKeyboardFocusVisualStyle" TargetType="Control">
             <Setter Property="Template">

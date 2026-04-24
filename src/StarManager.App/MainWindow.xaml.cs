@@ -1,9 +1,11 @@
 ﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -27,13 +29,19 @@ public partial class MainWindow : Window
     private StarScanResult? _scanResult;
     private AppSettings _settings = new();
     private bool _isDarkThemeActive;
+    private string _providerSearchQuery = string.Empty;
+    private bool _showOnlyNeedingSetup;
+    private HashSet<string> _initializedProviderEntryPaths = new(StringComparer.OrdinalIgnoreCase);
 
     public ObservableCollection<ProviderItem> Providers { get; } = [];
+    public ICollectionView ProvidersView { get; }
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
+        ProvidersView = CollectionViewSource.GetDefaultView(Providers);
+        ProvidersView.Filter = ProviderMatchesSearchQuery;
         SourceInitialized += OnSourceInitialized;
         LoadSettings();
     }
@@ -112,8 +120,11 @@ public partial class MainWindow : Window
             foreach (var provider in _scanResult.Providers)
             {
                 provider.StatusText = _providerProcessService.IsRunning(provider) ? "Running" : "Stopped";
+                provider.RequiresConfigureFirst = !_initializedProviderEntryPaths.Contains(provider.EntryPath);
                 Providers.Add(provider);
             }
+
+            ProvidersView.Refresh();
 
             StatusTextBlock.Text =
                 $"Scan complete: {_scanResult.Providers.Count} provider(s) found. " +
@@ -136,6 +147,7 @@ public partial class MainWindow : Window
         try
         {
             _providerProcessService.LaunchConfigure(provider);
+            MarkProviderInitialized(provider);
             StatusTextBlock.Text = $"Opened configure UI for provider '{provider.Name}'.";
         }
         catch (Exception ex)
@@ -154,6 +166,7 @@ public partial class MainWindow : Window
         try
         {
             _providerProcessService.StartProvider(provider);
+            MarkProviderInitialized(provider);
             provider.StatusText = "Running";
             StatusTextBlock.Text = $"Started provider '{provider.Name}'.";
         }
@@ -288,6 +301,62 @@ public partial class MainWindow : Window
         return true;
     }
 
+    private void ProviderSearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        _providerSearchQuery = ProviderSearchTextBox.Text.Trim();
+        ProvidersView.Refresh();
+    }
+
+    private void ShowNeedingSetupOnlyCheckBox_OnCheckedChanged(object sender, RoutedEventArgs e)
+    {
+        _showOnlyNeedingSetup = ShowNeedingSetupOnlyCheckBox.IsChecked == true;
+        ProvidersView.Refresh();
+    }
+
+    private void ClearProviderSearchButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ProviderSearchTextBox.Clear();
+        _ = ProviderSearchTextBox.Focus();
+    }
+
+    private bool ProviderMatchesSearchQuery(object item)
+    {
+        if (item is not ProviderItem provider)
+        {
+            return false;
+        }
+
+        if (_showOnlyNeedingSetup && !provider.RequiresConfigureFirst)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(_providerSearchQuery))
+        {
+            return true;
+        }
+
+        return provider.Name.Contains(_providerSearchQuery, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void MarkProviderInitialized(ProviderItem provider)
+    {
+        provider.RequiresConfigureFirst = false;
+        ProvidersView.Refresh();
+
+        if (!_initializedProviderEntryPaths.Add(provider.EntryPath))
+        {
+            return;
+        }
+
+        _settings.InitializedProviderEntryPaths =
+            _initializedProviderEntryPaths
+                .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+        _settingsService.Save(_settings);
+    }
+
     private static ProcessStartInfo BuildProcessStartInfo(string entryPath)
     {
         var directory = Path.GetDirectoryName(entryPath)
@@ -342,6 +411,12 @@ public partial class MainWindow : Window
             SetThemeBrush("AppDisabledForegroundBrush", Color.FromRgb(164, 176, 194));
             SetThemeBrush("AppFocusBrush", Color.FromRgb(139, 184, 255));
             SetThemeBrush("AppTabActiveBackgroundBrush", Color.FromRgb(44, 67, 103));
+            SetThemeBrush("AppBadgeRunningBackgroundBrush", Color.FromRgb(28, 58, 42));
+            SetThemeBrush("AppBadgeRunningForegroundBrush", Color.FromRgb(185, 242, 206));
+            SetThemeBrush("AppBadgeRunningBorderBrush", Color.FromRgb(63, 138, 99));
+            SetThemeBrush("AppBadgeStoppedBackgroundBrush", Color.FromRgb(43, 50, 64));
+            SetThemeBrush("AppBadgeStoppedForegroundBrush", Color.FromRgb(213, 217, 225));
+            SetThemeBrush("AppBadgeStoppedBorderBrush", Color.FromRgb(139, 150, 170));
             return;
         }
 
@@ -360,6 +435,12 @@ public partial class MainWindow : Window
         SetThemeBrush("AppDisabledForegroundBrush", Color.FromRgb(99, 107, 120));
         SetThemeBrush("AppFocusBrush", Color.FromRgb(29, 78, 216));
         SetThemeBrush("AppTabActiveBackgroundBrush", Color.FromRgb(231, 240, 255));
+        SetThemeBrush("AppBadgeRunningBackgroundBrush", Color.FromRgb(232, 247, 238));
+        SetThemeBrush("AppBadgeRunningForegroundBrush", Color.FromRgb(15, 81, 50));
+        SetThemeBrush("AppBadgeRunningBorderBrush", Color.FromRgb(121, 198, 155));
+        SetThemeBrush("AppBadgeStoppedBackgroundBrush", Color.FromRgb(241, 243, 246));
+        SetThemeBrush("AppBadgeStoppedForegroundBrush", Color.FromRgb(55, 65, 81));
+        SetThemeBrush("AppBadgeStoppedBorderBrush", Color.FromRgb(156, 163, 175));
     }
 
     private static void SetThemeBrush(string key, Color color)
@@ -427,6 +508,10 @@ public partial class MainWindow : Window
     private void LoadSettings()
     {
         _settings = _settingsService.Load();
+        _initializedProviderEntryPaths =
+            _settings.InitializedProviderEntryPaths is { Count: > 0 }
+                ? new HashSet<string>(_settings.InitializedProviderEntryPaths, StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (!string.IsNullOrWhiteSpace(_settings.LastStarRootPath) && Directory.Exists(_settings.LastStarRootPath))
         {
