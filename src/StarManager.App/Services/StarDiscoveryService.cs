@@ -6,6 +6,7 @@ namespace StarManager.App.Services;
 public sealed class StarDiscoveryService
 {
     private const string ProviderDirectoryName = "provider";
+    private const string ProvidersDirectoryName = "providers";
     private const string UserDirectoryName = "user";
     private const string CoagulatorDirectoryName = "coagulator";
 
@@ -17,14 +18,24 @@ public sealed class StarDiscoveryService
         }
 
         var normalizedRoot = Path.GetFullPath(rootPath);
-        var providerDirectory = Path.Combine(normalizedRoot, ProviderDirectoryName);
-        var coagulatorDirectory = Path.Combine(normalizedRoot, CoagulatorDirectoryName);
-        var userDirectory = Path.Combine(normalizedRoot, UserDirectoryName);
+        var diagnostics = new List<string>
+        {
+            $"Scan root: {normalizedRoot}",
+        };
 
-        var providers = DiscoverProviders(providerDirectory);
+        var providerDirectory = ResolveProviderDirectory(normalizedRoot, diagnostics);
+        var coagulatorDirectory = ResolveDirectory(normalizedRoot, CoagulatorDirectoryName);
+        var userDirectory = ResolveDirectory(normalizedRoot, UserDirectoryName);
+
+        var providers = DiscoverProviders(providerDirectory, diagnostics);
         var starAppEntryPath = DetectStarUserAppEntry(userDirectory);
         var coagulatorEntryPath = DetectCoagulatorEntry(coagulatorDirectory);
         var coagulatorWebsiteUrl = DetectCoagulatorWebsiteUrl(coagulatorDirectory);
+
+        diagnostics.Add($"Provider count: {providers.Count}");
+        diagnostics.Add($"STAR app entry: {(starAppEntryPath ?? "not found")}");
+        diagnostics.Add($"Coagulator entry: {(coagulatorEntryPath ?? "not found")}");
+        diagnostics.Add($"Coagulator website URL: {(coagulatorWebsiteUrl ?? "not available")}");
 
         return new StarScanResult
         {
@@ -33,17 +44,49 @@ public sealed class StarDiscoveryService
             StarAppEntryPath = starAppEntryPath,
             CoagulatorEntryPath = coagulatorEntryPath,
             CoagulatorWebsiteUrl = coagulatorWebsiteUrl,
+            Diagnostics = diagnostics,
         };
     }
 
-    private static IReadOnlyList<ProviderItem> DiscoverProviders(string providerDirectory)
+    private static string? ResolveProviderDirectory(string normalizedRoot, List<string> diagnostics)
     {
-        if (!Directory.Exists(providerDirectory))
+        var providerDirectory = ResolveDirectory(normalizedRoot, ProviderDirectoryName)
+            ?? ResolveDirectory(normalizedRoot, ProvidersDirectoryName);
+
+        if (!string.IsNullOrWhiteSpace(providerDirectory))
         {
+            diagnostics.Add($"Provider directory: {providerDirectory}");
+            return providerDirectory;
+        }
+
+        var folderName = Path.GetFileName(normalizedRoot);
+        if (folderName.Equals(ProviderDirectoryName, StringComparison.OrdinalIgnoreCase)
+            || folderName.Equals(ProvidersDirectoryName, StringComparison.OrdinalIgnoreCase))
+        {
+            diagnostics.Add($"Provider directory inferred from selected folder name: {normalizedRoot}");
+            return normalizedRoot;
+        }
+
+        diagnostics.Add("Provider directory not found (expected 'provider' or 'providers').");
+        return null;
+    }
+
+    private static string? ResolveDirectory(string root, string childDirectoryName)
+    {
+        var direct = Path.Combine(root, childDirectoryName);
+        return Directory.Exists(direct) ? direct : null;
+    }
+
+    private static IReadOnlyList<ProviderItem> DiscoverProviders(string? providerDirectory, List<string> diagnostics)
+    {
+        if (string.IsNullOrWhiteSpace(providerDirectory) || !Directory.Exists(providerDirectory))
+        {
+            diagnostics.Add("Provider scan skipped: no provider directory exists.");
             return [];
         }
 
         var providers = new List<ProviderItem>();
+        var seenEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var directory in Directory.GetDirectories(providerDirectory))
         {
@@ -59,6 +102,11 @@ public sealed class StarDiscoveryService
                 continue;
             }
 
+            if (!seenEntries.Add(entryPath))
+            {
+                continue;
+            }
+
             providers.Add(new ProviderItem
             {
                 Name = folderName,
@@ -66,6 +114,48 @@ public sealed class StarDiscoveryService
                 EntryPath = entryPath,
                 IsExecutable = Path.GetExtension(entryPath).Equals(".exe", StringComparison.OrdinalIgnoreCase),
             });
+        }
+
+        // Support STAR layouts where providers are files directly under the provider directory.
+        foreach (var filePath in Directory.GetFiles(providerDirectory, "*.py", SearchOption.TopDirectoryOnly)
+                     .Concat(Directory.GetFiles(providerDirectory, "*.exe", SearchOption.TopDirectoryOnly)))
+        {
+            var extension = Path.GetExtension(filePath);
+            var providerName = Path.GetFileNameWithoutExtension(filePath);
+
+            if (string.IsNullOrWhiteSpace(providerName)
+                || providerName.Equals("provider", StringComparison.OrdinalIgnoreCase)
+                || providerName.Equals("__init__", StringComparison.OrdinalIgnoreCase)
+                || providerName.Equals("coagulator", StringComparison.OrdinalIgnoreCase)
+                || providerName.Equals("STAR", StringComparison.OrdinalIgnoreCase)
+                || providerName.Equals("readme", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!extension.Equals(".py", StringComparison.OrdinalIgnoreCase)
+                && !extension.Equals(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!seenEntries.Add(filePath))
+            {
+                continue;
+            }
+
+            providers.Add(new ProviderItem
+            {
+                Name = providerName,
+                FolderPath = providerDirectory,
+                EntryPath = filePath,
+                IsExecutable = extension.Equals(".exe", StringComparison.OrdinalIgnoreCase),
+            });
+        }
+
+        if (providers.Count == 0)
+        {
+            diagnostics.Add($"No providers found in directory: {providerDirectory}");
         }
 
         return providers
@@ -104,9 +194,9 @@ public sealed class StarDiscoveryService
             .FirstOrDefault();
     }
 
-    private static string? DetectStarUserAppEntry(string userDirectory)
+    private static string? DetectStarUserAppEntry(string? userDirectory)
     {
-        if (!Directory.Exists(userDirectory))
+        if (string.IsNullOrWhiteSpace(userDirectory) || !Directory.Exists(userDirectory))
         {
             return null;
         }
@@ -126,9 +216,9 @@ public sealed class StarDiscoveryService
         return null;
     }
 
-    private static string? DetectCoagulatorEntry(string coagulatorDirectory)
+    private static string? DetectCoagulatorEntry(string? coagulatorDirectory)
     {
-        if (!Directory.Exists(coagulatorDirectory))
+        if (string.IsNullOrWhiteSpace(coagulatorDirectory) || !Directory.Exists(coagulatorDirectory))
         {
             return null;
         }
@@ -148,8 +238,13 @@ public sealed class StarDiscoveryService
         return null;
     }
 
-    private static string? DetectCoagulatorWebsiteUrl(string coagulatorDirectory)
+    private static string? DetectCoagulatorWebsiteUrl(string? coagulatorDirectory)
     {
+        if (string.IsNullOrWhiteSpace(coagulatorDirectory) || !Directory.Exists(coagulatorDirectory))
+        {
+            return null;
+        }
+
         var coagulatorIniPath = Path.Combine(coagulatorDirectory, "coagulator.ini");
         if (!File.Exists(coagulatorIniPath))
         {

@@ -128,6 +128,7 @@ public partial class MainWindow : Window
             }
 
             ProvidersView.Refresh();
+            ScanDiagnosticsTextBox.Text = string.Join(Environment.NewLine, _scanResult.Diagnostics);
 
             StatusTextBlock.Text =
                 $"Scan complete: {_scanResult.Providers.Count} provider(s) found. " +
@@ -136,6 +137,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            ScanDiagnosticsTextBox.Text = ex.ToString();
             StatusTextBlock.Text = $"Scan failed: {ex.Message}";
         }
     }

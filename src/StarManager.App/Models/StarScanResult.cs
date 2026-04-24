@@ -11,4 +11,6 @@ public sealed class StarScanResult
     public string? CoagulatorWebsiteUrl { get; init; }
 
     public IReadOnlyList<ProviderItem> Providers { get; init; } = [];
+
+    public IReadOnlyList<string> Diagnostics { get; init; } = [];
 }
