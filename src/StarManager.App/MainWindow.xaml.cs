@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private string _providerSearchQuery = string.Empty;
     private bool _showOnlyNeedingSetup;
     private bool _isUpdatingRecentStarPathSelection;
+    private bool _isInitializingUi = true;
     private HashSet<string> _initializedProviderEntryPaths = new(StringComparer.OrdinalIgnoreCase);
     private ProviderItem? _selectedProvider;
 
@@ -49,6 +50,7 @@ public partial class MainWindow : Window
         ProvidersView.Filter = ProviderMatchesSearchQuery;
         SourceInitialized += OnSourceInitialized;
         LoadSettings();
+        _isInitializingUi = false;
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -317,6 +319,11 @@ public partial class MainWindow : Window
 
     private void ThemeComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_isInitializingUi)
+        {
+            return;
+        }
+
         if (ThemeComboBox.SelectedItem is not ComboBoxItem selected)
         {
             return;

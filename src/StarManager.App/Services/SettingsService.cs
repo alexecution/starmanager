@@ -16,12 +16,14 @@ public sealed class SettingsService
 
     public SettingsService()
     {
-        var baseDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        var roamingBaseDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "StarManager");
 
-        Directory.CreateDirectory(baseDirectory);
-        _settingsFilePath = Path.Combine(baseDirectory, "settings.json");
+        Directory.CreateDirectory(roamingBaseDirectory);
+        _settingsFilePath = Path.Combine(roamingBaseDirectory, "settings.json");
+
+        TryMigrateFromLocalAppData(_settingsFilePath);
     }
 
     public AppSettings Load()
@@ -46,5 +48,32 @@ public sealed class SettingsService
     {
         var json = JsonSerializer.Serialize(settings, JsonOptions);
         File.WriteAllText(_settingsFilePath, json);
+    }
+
+    private static void TryMigrateFromLocalAppData(string roamingSettingsFilePath)
+    {
+        if (File.Exists(roamingSettingsFilePath))
+        {
+            return;
+        }
+
+        var localSettingsFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "StarManager",
+            "settings.json");
+
+        if (!File.Exists(localSettingsFilePath))
+        {
+            return;
+        }
+
+        try
+        {
+            File.Copy(localSettingsFilePath, roamingSettingsFilePath, overwrite: false);
+        }
+        catch
+        {
+            // Fall back to defaults if migration fails; app continues normally.
+        }
     }
 }
