@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StarManager.App/StarManager.App.csproj" />
+  </Folder>
+</Solution>

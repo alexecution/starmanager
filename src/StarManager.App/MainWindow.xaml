@@ -1,0 +1,148 @@
+﻿<Window x:Class="StarManager.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:models="clr-namespace:StarManager.App.Models"
+        mc:Ignorable="d"
+        Title="STAR Manager"
+        Height="680"
+        Width="1120"
+        MinHeight="520"
+        MinWidth="900">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Grid.ColumnSpan="2"
+                   Text="STAR Setup Manager"
+                   FontSize="26"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,10" />
+
+        <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,8,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox x:Name="StarPathTextBox"
+                     Grid.Column="0"
+                     Height="34"
+                     VerticalContentAlignment="Center"
+                     IsReadOnly="True"
+                     Margin="0,0,8,0" />
+
+            <Button x:Name="BrowseButton"
+                    Grid.Column="1"
+                    Content="Browse"
+                    Height="34"
+                    Padding="16,0"
+                    Margin="0,0,8,0"
+                    Click="BrowseButton_OnClick" />
+
+            <Button x:Name="ScanButton"
+                    Grid.Column="2"
+                    Content="Scan"
+                    Height="34"
+                    Padding="16,0"
+                    Click="ScanButton_OnClick" />
+        </Grid>
+
+        <StackPanel Grid.Row="1"
+                    Grid.Column="1"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    Margin="8,0,0,10">
+            <TextBlock Text="Theme"
+                       VerticalAlignment="Center"
+                       Margin="0,0,8,0" />
+            <ComboBox x:Name="ThemeComboBox"
+                      Width="120"
+                      Height="30"
+                      SelectionChanged="ThemeComboBox_OnSelectionChanged">
+                <ComboBoxItem Content="System" IsSelected="True" />
+                <ComboBoxItem Content="Dark" />
+                <ComboBoxItem Content="Light" />
+            </ComboBox>
+        </StackPanel>
+
+        <Grid Grid.Row="2" Grid.ColumnSpan="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <WrapPanel Grid.Row="0" Margin="0,0,0,10">
+                <Button Content="Launch STAR App"
+                        Height="34"
+                        Padding="14,0"
+                        Margin="0,0,10,0"
+                        Click="LaunchStarAppButton_OnClick" />
+                <Button Content="Open Coagulator Website"
+                        Height="34"
+                        Padding="14,0"
+                        Click="OpenCoagulatorWebsiteButton_OnClick" />
+            </WrapPanel>
+
+            <DataGrid x:Name="ProvidersDataGrid"
+                      Grid.Row="1"
+                      ItemsSource="{Binding Providers}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      IsReadOnly="True"
+                      HeadersVisibility="Column"
+                      RowHeaderWidth="0"
+                      GridLinesVisibility="Horizontal"
+                      SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Provider" Binding="{Binding Name}" Width="2*" />
+                    <DataGridTextColumn Header="Folder" Binding="{Binding FolderPath}" Width="3*" />
+                    <DataGridTextColumn Header="Entry" Binding="{Binding EntryPath}" Width="3*" />
+                    <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="*" />
+
+                    <DataGridTemplateColumn Header="Actions" Width="3*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate DataType="{x:Type models:ProviderItem}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <Button Content="Configure"
+                                            Margin="0,0,6,0"
+                                            Padding="12,3"
+                                            Click="ConfigureProviderButton_OnClick"
+                                            Tag="{Binding}" />
+                                    <Button Content="Start"
+                                            Margin="0,0,6,0"
+                                            Padding="12,3"
+                                            Click="StartProviderButton_OnClick"
+                                            Tag="{Binding}" />
+                                    <Button Content="Stop"
+                                            Padding="12,3"
+                                            Click="StopProviderButton_OnClick"
+                                            Tag="{Binding}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <TextBlock x:Name="StatusTextBlock"
+                   Grid.Row="3"
+                   Grid.ColumnSpan="2"
+                   Margin="0,10,0,0"
+                   FontWeight="SemiBold"
+                   Text="Select your STAR folder and click Scan." />
+    </Grid>
+</Window>
