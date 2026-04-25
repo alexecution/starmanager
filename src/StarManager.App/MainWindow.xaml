@@ -7,6 +7,7 @@
         mc:Ignorable="d"
         Title="STAR Manager"
         Loaded="Window_OnLoaded"
+        Closing="Window_OnClosing"
         PreviewKeyDown="Window_OnPreviewKeyDown"
         Height="680"
         Width="1120"
@@ -103,6 +104,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
@@ -280,7 +282,60 @@
                             Click="StopSelectedProviderButton_OnClick" />
                         </WrapPanel>
 
-                        <Expander Grid.Row="4"
+                    <Expander Grid.Row="4"
+                              Margin="0,10,0,0"
+                              Header="Provider INI editor"
+                              IsExpanded="False">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <WrapPanel Grid.Row="0" Margin="0,0,0,8">
+                                <Button x:Name="LoadProviderIniButton"
+                                        Content="Load selected INI"
+                                        TabIndex="14"
+                                        IsEnabled="False"
+                                        Margin="0,0,8,0"
+                                        Click="LoadProviderIniButton_OnClick" />
+
+                                <Button x:Name="ReloadProviderIniButton"
+                                        Content="Reload INI"
+                                        TabIndex="15"
+                                        IsEnabled="False"
+                                        Margin="0,0,8,0"
+                                        Click="ReloadProviderIniButton_OnClick" />
+
+                                <Button x:Name="SaveProviderIniButton"
+                                        Content="Save INI"
+                                        TabIndex="16"
+                                        IsEnabled="False"
+                                        Click="SaveProviderIniButton_OnClick" />
+                            </WrapPanel>
+
+                            <TextBlock x:Name="SelectedProviderIniPathTextBlock"
+                                       Grid.Row="1"
+                                       Margin="0,0,0,8"
+                                       Foreground="{DynamicResource AppSecondaryForegroundBrush}"
+                                       Text="INI file: none loaded" />
+
+                            <TextBox x:Name="ProviderIniEditorTextBox"
+                                     Grid.Row="2"
+                                     MinHeight="100"
+                                     MaxHeight="240"
+                                     AcceptsReturn="True"
+                                     AcceptsTab="True"
+                                     IsEnabled="False"
+                                     TextWrapping="NoWrap"
+                                     TextChanged="ProviderIniEditorTextBox_OnTextChanged"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto" />
+                        </Grid>
+                    </Expander>
+
+                    <Expander Grid.Row="5"
                               Margin="0,10,0,0"
                               Header="Scan diagnostics"
                               IsExpanded="False">

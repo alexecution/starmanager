@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly StarDiscoveryService _discoveryService = new();
     private readonly ProviderProcessService _providerProcessService = new();
     private readonly CoagulatorProcessService _coagulatorProcessService = new();
+    private readonly ProviderIniEditorService _providerIniEditorService = new();
     private readonly SettingsService _settingsService = new();
 
     private string? _selectedStarRoot;
@@ -35,6 +36,10 @@ public partial class MainWindow : Window
     private bool _isInitializingUi = true;
     private HashSet<string> _initializedProviderEntryPaths = new(StringComparer.OrdinalIgnoreCase);
     private ProviderItem? _selectedProvider;
+    private string? _selectedProviderIniPath;
+    private bool _isLoadingProviderIniContent;
+    private bool _hasUnsavedProviderIniChanges;
+    private bool _isRestoringProviderSelection;
 
     private const int MaxRecentStarPaths = 10;
     private const int MaxActivityLogLines = 300;
@@ -69,6 +74,16 @@ public partial class MainWindow : Window
                 _ = BrowseButton.Focus();
             }
         }, DispatcherPriority.Input);
+    }
+
+    private void Window_OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (ConfirmPendingProviderIniChanges("closing the app"))
+        {
+            return;
+        }
+
+        e.Cancel = true;
     }
 
     private void Window_OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -182,6 +197,24 @@ public partial class MainWindow : Window
 
     private void ProvidersDataGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_isRestoringProviderSelection)
+        {
+            UpdateSelectedProviderState();
+            return;
+        }
+
+        var previousProvider = e.RemovedItems.OfType<ProviderItem>().FirstOrDefault();
+        var nextProvider = e.AddedItems.OfType<ProviderItem>().FirstOrDefault();
+        var changedProvider = !string.Equals(previousProvider?.EntryPath, nextProvider?.EntryPath, StringComparison.OrdinalIgnoreCase);
+
+        if (changedProvider && !ConfirmPendingProviderIniChanges("switching providers"))
+        {
+            _isRestoringProviderSelection = true;
+            ProvidersDataGrid.SelectedItem = previousProvider;
+            _isRestoringProviderSelection = false;
+            return;
+        }
+
         UpdateSelectedProviderState();
     }
 
@@ -217,16 +250,152 @@ public partial class MainWindow : Window
 
     private void UpdateSelectedProviderState()
     {
+        var previousProviderEntryPath = _selectedProvider?.EntryPath;
         _selectedProvider = ProvidersDataGrid.SelectedItem as ProviderItem;
+        var selectedProviderChanged = !string.Equals(previousProviderEntryPath, _selectedProvider?.EntryPath, StringComparison.OrdinalIgnoreCase);
+
+        if (selectedProviderChanged)
+        {
+            ClearLoadedProviderIniEditor(clearText: true);
+        }
 
         var hasSelection = _selectedProvider is not null;
         ConfigureSelectedProviderButton.IsEnabled = hasSelection;
         StartSelectedProviderButton.IsEnabled = hasSelection;
         StopSelectedProviderButton.IsEnabled = hasSelection;
+        LoadProviderIniButton.IsEnabled = hasSelection;
+
+        if (string.IsNullOrWhiteSpace(_selectedProviderIniPath))
+        {
+            SelectedProviderIniPathTextBlock.Text = hasSelection
+                ? "INI file: none loaded"
+                : "INI file: select a provider to load its settings";
+        }
 
         SelectedProviderTextBlock.Text = hasSelection
             ? $"Selected provider: {_selectedProvider!.Name}"
             : "Selected provider: none";
+    }
+
+    private void LoadProviderIniButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_selectedProvider is null)
+        {
+            LogStatus("Select a provider before loading an INI file.", isError: true);
+            return;
+        }
+
+        if (!ConfirmPendingProviderIniChanges("loading a different INI file"))
+        {
+            return;
+        }
+
+        try
+        {
+            var iniFilePath = _providerIniEditorService.FindLikelyIniFile(_selectedProvider);
+            if (string.IsNullOrWhiteSpace(iniFilePath))
+            {
+                ClearLoadedProviderIniEditor(clearText: true);
+                LogStatus($"No INI file found for provider '{_selectedProvider.Name}'.", isError: true);
+                return;
+            }
+
+            LoadIniIntoEditor(iniFilePath);
+            LogStatus($"Loaded INI for provider '{_selectedProvider.Name}': {iniFilePath}");
+        }
+        catch (Exception ex)
+        {
+            LogStatus($"Could not load provider INI: {ex.Message}", isError: true);
+        }
+    }
+
+    private void ReloadProviderIniButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_selectedProviderIniPath))
+        {
+            LogStatus("No INI file is currently loaded.", isError: true);
+            return;
+        }
+
+        if (!ConfirmPendingProviderIniChanges("reloading this INI file"))
+        {
+            return;
+        }
+
+        try
+        {
+            LoadIniIntoEditor(_selectedProviderIniPath);
+            LogStatus($"Reloaded INI from '{_selectedProviderIniPath}'.");
+        }
+        catch (Exception ex)
+        {
+            LogStatus($"Could not reload INI: {ex.Message}", isError: true);
+        }
+    }
+
+    private void SaveProviderIniButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_selectedProviderIniPath))
+        {
+            LogStatus("No INI file is currently loaded.", isError: true);
+            return;
+        }
+
+        try
+        {
+            var backupFilePath = _providerIniEditorService.SaveIniFileSafely(_selectedProviderIniPath, ProviderIniEditorTextBox.Text);
+            _hasUnsavedProviderIniChanges = false;
+            UpdateProviderIniPathLabel();
+
+            if (string.IsNullOrWhiteSpace(backupFilePath))
+            {
+                LogStatus($"Saved INI: {_selectedProviderIniPath}");
+                return;
+            }
+
+            LogStatus($"Saved INI: {_selectedProviderIniPath} (backup: {backupFilePath})");
+        }
+        catch (Exception ex)
+        {
+            LogStatus($"Could not save INI: {ex.Message}", isError: true);
+        }
+    }
+
+    private void LoadIniIntoEditor(string iniFilePath)
+    {
+        _isLoadingProviderIniContent = true;
+        try
+        {
+            ProviderIniEditorTextBox.Text = _providerIniEditorService.ReadIniFile(iniFilePath);
+        }
+        finally
+        {
+            _isLoadingProviderIniContent = false;
+        }
+
+        _selectedProviderIniPath = iniFilePath;
+        _hasUnsavedProviderIniChanges = false;
+        ProviderIniEditorTextBox.IsEnabled = true;
+        ReloadProviderIniButton.IsEnabled = true;
+        SaveProviderIniButton.IsEnabled = true;
+        UpdateProviderIniPathLabel();
+    }
+
+    private void ClearLoadedProviderIniEditor(bool clearText)
+    {
+        _selectedProviderIniPath = null;
+        _hasUnsavedProviderIniChanges = false;
+
+        if (clearText)
+        {
+            _isLoadingProviderIniContent = true;
+            ProviderIniEditorTextBox.Clear();
+            _isLoadingProviderIniContent = false;
+        }
+
+        ProviderIniEditorTextBox.IsEnabled = false;
+        ReloadProviderIniButton.IsEnabled = false;
+        SaveProviderIniButton.IsEnabled = false;
     }
 
     private void ExecuteConfigureProvider(ProviderItem provider)
@@ -731,6 +900,64 @@ public partial class MainWindow : Window
     {
         ActivityLogTextBox.Clear();
         LogStatus("Activity log cleared.", includeInLog: false);
+    }
+
+    private void ProviderIniEditorTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_isLoadingProviderIniContent || string.IsNullOrWhiteSpace(_selectedProviderIniPath))
+        {
+            return;
+        }
+
+        if (_hasUnsavedProviderIniChanges)
+        {
+            return;
+        }
+
+        _hasUnsavedProviderIniChanges = true;
+        UpdateProviderIniPathLabel();
+    }
+
+    private void UpdateProviderIniPathLabel()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedProviderIniPath))
+        {
+            return;
+        }
+
+        SelectedProviderIniPathTextBlock.Text = _hasUnsavedProviderIniChanges
+            ? $"INI file: {_selectedProviderIniPath} (unsaved changes)"
+            : $"INI file: {_selectedProviderIniPath}";
+    }
+
+    private bool ConfirmPendingProviderIniChanges(string actionDescription)
+    {
+        if (!_hasUnsavedProviderIniChanges)
+        {
+            return true;
+        }
+
+        var decision = MessageBox.Show(
+            this,
+            $"You have unsaved INI changes. Save before {actionDescription}?",
+            "Unsaved INI changes",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Warning,
+            MessageBoxResult.Yes);
+
+        if (decision == MessageBoxResult.Yes)
+        {
+            SaveProviderIniButton_OnClick(this, new RoutedEventArgs());
+            return !_hasUnsavedProviderIniChanges;
+        }
+
+        if (decision == MessageBoxResult.No)
+        {
+            _hasUnsavedProviderIniChanges = false;
+            return true;
+        }
+
+        return false;
     }
 
     private void LogStatus(string message, bool isError = false, bool includeInLog = true)
