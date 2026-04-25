@@ -127,6 +127,11 @@ public partial class MainWindow : Window
 
     private void ScanButton_OnClick(object sender, RoutedEventArgs e)
     {
+        ScanSelectedStarRoot();
+    }
+
+    private void ScanSelectedStarRoot()
+    {
         if (string.IsNullOrWhiteSpace(_selectedStarRoot))
         {
             LogStatus("Select a STAR folder first.");
@@ -801,7 +806,8 @@ public partial class MainWindow : Window
                 RecentStarPathsComboBox.SelectedItem = _selectedStarRoot;
             }
 
-            LogStatus("Loaded last STAR folder from settings. Click Scan to refresh components.");
+            LogStatus("Loaded last STAR folder from settings. Running initial scan.");
+            ScanSelectedStarRoot();
         }
 
         var themeName = string.IsNullOrWhiteSpace(_settings.ThemeName) ? "System" : _settings.ThemeName;
