@@ -61,6 +61,17 @@ public sealed class ProviderIniEditorService
         return File.ReadAllText(iniPath);
     }
 
+    public bool HasConfiguredValues(ProviderItem provider)
+    {
+        var iniPath = FindLikelyIniFile(provider);
+        if (string.IsNullOrWhiteSpace(iniPath) || !File.Exists(iniPath))
+        {
+            return false;
+        }
+
+        return IniHasConfiguredValues(iniPath);
+    }
+
     public string? SaveIniFileSafely(string iniPath, string content)
     {
         var directory = Path.GetDirectoryName(iniPath)
@@ -83,5 +94,44 @@ public sealed class ProviderIniEditorService
 
         File.Move(tempFilePath, iniPath);
         return null;
+    }
+
+    private static bool IniHasConfiguredValues(string iniPath)
+    {
+        var hasSettings = false;
+
+        foreach (var rawLine in File.ReadLines(iniPath))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0
+                || line.StartsWith(';')
+                || line.StartsWith('#')
+                || (line.StartsWith('[') && line.EndsWith(']')))
+            {
+                continue;
+            }
+
+            var separatorIndex = line.IndexOf('=');
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            var key = line[..separatorIndex].Trim();
+            if (key.Length == 0)
+            {
+                continue;
+            }
+
+            hasSettings = true;
+
+            var value = line[(separatorIndex + 1)..].Trim();
+            if (value.Length == 0)
+            {
+                return false;
+            }
+        }
+
+        return hasSettings;
     }
 }

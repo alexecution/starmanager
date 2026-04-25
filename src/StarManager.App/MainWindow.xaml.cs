@@ -34,7 +34,6 @@ public partial class MainWindow : Window
     private bool _showOnlyNeedingSetup;
     private bool _isUpdatingRecentStarPathSelection;
     private bool _isInitializingUi = true;
-    private HashSet<string> _initializedProviderEntryPaths = new(StringComparer.OrdinalIgnoreCase);
     private ProviderItem? _selectedProvider;
     private string? _selectedProviderIniPath;
     private bool _isLoadingProviderIniContent;
@@ -142,7 +141,7 @@ public partial class MainWindow : Window
             foreach (var provider in _scanResult.Providers)
             {
                 provider.StatusText = _providerProcessService.IsRunning(provider) ? "Running" : "Stopped";
-                provider.RequiresConfigureFirst = !_initializedProviderEntryPaths.Contains(provider.EntryPath);
+                provider.RequiresConfigureFirst = DetermineRequiresConfigureFirst(provider);
                 Providers.Add(provider);
             }
 
@@ -346,6 +345,7 @@ public partial class MainWindow : Window
             var backupFilePath = _providerIniEditorService.SaveIniFileSafely(_selectedProviderIniPath, ProviderIniEditorTextBox.Text);
             _hasUnsavedProviderIniChanges = false;
             UpdateProviderIniPathLabel();
+            RefreshProviderConfigurationState(_selectedProvider);
 
             if (string.IsNullOrWhiteSpace(backupFilePath))
             {
@@ -403,7 +403,7 @@ public partial class MainWindow : Window
         try
         {
             _providerProcessService.LaunchConfigure(provider);
-            MarkProviderInitialized(provider);
+            RefreshProviderConfigurationState(provider);
             LogStatus($"Opened configure UI for provider '{provider.Name}'.");
         }
         catch (Exception ex)
@@ -417,7 +417,7 @@ public partial class MainWindow : Window
         try
         {
             _providerProcessService.StartProvider(provider);
-            MarkProviderInitialized(provider);
+            RefreshProviderConfigurationState(provider);
             provider.StatusText = "Running";
             LogStatus($"Started provider '{provider.Name}'.");
         }
@@ -615,22 +615,27 @@ public partial class MainWindow : Window
         return provider.Name.Contains(_providerSearchQuery, StringComparison.OrdinalIgnoreCase);
     }
 
-    private void MarkProviderInitialized(ProviderItem provider)
+    private bool DetermineRequiresConfigureFirst(ProviderItem provider)
     {
-        provider.RequiresConfigureFirst = false;
-        ProvidersView.Refresh();
+        try
+        {
+            return !_providerIniEditorService.HasConfiguredValues(provider);
+        }
+        catch
+        {
+            return true;
+        }
+    }
 
-        if (!_initializedProviderEntryPaths.Add(provider.EntryPath))
+    private void RefreshProviderConfigurationState(ProviderItem? provider)
+    {
+        if (provider is null)
         {
             return;
         }
 
-        _settings.InitializedProviderEntryPaths =
-            _initializedProviderEntryPaths
-                .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-        _settingsService.Save(_settings);
+        provider.RequiresConfigureFirst = DetermineRequiresConfigureFirst(provider);
+        ProvidersView.Refresh();
     }
 
     private static ProcessStartInfo BuildProcessStartInfo(string entryPath)
@@ -784,10 +789,6 @@ public partial class MainWindow : Window
     private void LoadSettings()
     {
         _settings = _settingsService.Load();
-        _initializedProviderEntryPaths =
-            _settings.InitializedProviderEntryPaths is { Count: > 0 }
-                ? new HashSet<string>(_settings.InitializedProviderEntryPaths, StringComparer.OrdinalIgnoreCase)
-                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         RefreshRecentStarPaths(_settings.RecentStarRootPaths ?? []);
 
